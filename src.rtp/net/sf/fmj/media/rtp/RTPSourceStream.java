@@ -206,10 +206,8 @@ public class RTPSourceStream
          */
         protected int size;
 
-        public PktQue(int size)
+        public PktQue()
         {
-            allocBuffers(size);
-
             /*
              * Assign the adaptive jitter buffer-related properties of this
              * instance values from the Registry or default values.
@@ -309,6 +307,8 @@ public class RTPSourceStream
             AJB_HISTORY_SIZE = AJB_GROW_INTERVAL < AJB_SHRINK_INTERVAL
                     ? AJB_SHRINK_INTERVAL
                     : AJB_GROW_INTERVAL;
+
+            allocBuffers(minSize);
 
             initHistory();
         }
@@ -1173,7 +1173,7 @@ public class RTPSourceStream
         startReq = new Object();
         dsource = datasource;
         datasource.setSourceStream(this);
-        pktQ = new PktQue(4);
+        pktQ = new PktQue();
         createThread();
     }
 
