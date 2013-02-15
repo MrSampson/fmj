@@ -275,7 +275,7 @@ public class RTPSourceStream
 
             value = com.sun.media.util.Registry.get(
                     "adaptive_jitter_buffer_MIN_SIZE");
-            int minSize = 4;
+            int minSize = 14;
             try
             {
                 minSize = Integer.parseInt((String)value);
