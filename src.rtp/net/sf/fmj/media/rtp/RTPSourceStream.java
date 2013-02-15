@@ -1,5 +1,7 @@
 package net.sf.fmj.media.rtp;
 
+import java.awt.*;
+
 import javax.media.*;
 import javax.media.control.*;
 import javax.media.format.*;
@@ -9,8 +11,6 @@ import net.sf.fmj.media.*;
 import net.sf.fmj.media.protocol.*;
 import net.sf.fmj.media.protocol.rtp.DataSource;
 import net.sf.fmj.media.rtp.util.*;
-
-import java.awt.*;
 
 /**
  *
@@ -275,7 +275,7 @@ public class RTPSourceStream
 
             value = com.sun.media.util.Registry.get(
                     "adaptive_jitter_buffer_MIN_SIZE");
-            int minSize = 14;
+            int minSize = 4;
             try
             {
                 minSize = Integer.parseInt((String)value);
