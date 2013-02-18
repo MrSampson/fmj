@@ -54,7 +54,7 @@ public class DataSource extends BasicPushBufferDataSource implements
      * Opens a connection to the source described by the URL.
      * <p>
      * Connect initiates communmication with the source.
-     * 
+     *
      * @exception IOException
      *                thrown if the connect has IO trouble.
      */
@@ -127,7 +127,7 @@ public class DataSource extends BasicPushBufferDataSource implements
 
     /**
      * Returns <tt>null</tt> because no controls are implemented.
-     * 
+     *
      * @return <tt>null</tt>.
      */
     @Override
@@ -152,7 +152,7 @@ public class DataSource extends BasicPushBufferDataSource implements
 
     /**
      * Returns an zero length array because no controls are supported.
-     * 
+     *
      * @return a zero length <tt>Object</tt> array.
      */
     @Override
@@ -184,7 +184,7 @@ public class DataSource extends BasicPushBufferDataSource implements
      * of streams is entirely content dependent. The mime-type of this
      * DataSource provides the only indication of what streams can be available
      * on this connection.
-     * 
+     *
      * @return collection of streams for this source.
      */
     @Override
@@ -208,7 +208,8 @@ public class DataSource extends BasicPushBufferDataSource implements
     public void prebuffer()
     {
         started = true;
-        srcStreams[0].prebuffer();
+//      srcStreams[0].prebuffer(); //Doesn't actually do anything and
+//tnothing calls this so ignoring...
     }
 
     public void setBufferListener(BufferListener listener)
@@ -267,7 +268,7 @@ public class DataSource extends BasicPushBufferDataSource implements
     /**
      * Initiates data-transfer. Start must be called before data is available.
      * Connect must be called before start.
-     * 
+     *
      * @exception IOException
      *                thrown if the source has IO trouble at startup time.
      */
