@@ -56,7 +56,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
          * collection of streams is entirely content dependent. The
          * <tt>ContentDescriptor</tt> of this <tt>DataSource</tt> provides the
          * only indication of what streams can be available on this connection.
-         * 
+         *
          * @return The collection of streams for this source.
          */
         @Override
@@ -144,6 +144,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
                 {
                 }
             }
+            Log.info("Closing RawBufferMux " + this.hashCode());
         }
 
         public Format getFormat()
@@ -251,6 +252,9 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
         {
             if (closed)
             {
+                 Log.info("Trying to read from RawBufferMux " +
+                          this.hashCode() +
+                          " with closed source stream");
                 throw new IOException("The source stream is closed");
             }
 
@@ -573,7 +577,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
      * returned can be a push or pull datasource. i.e. a
      * <tt>Push[Pull]DataSource</tt> or <tt>Push[Pull]BufferDataSource</tt>. <BR>
      * The datasource must be returned in the connected state.
-     * 
+     *
      * @return the output <tt>DataSource</tt>
      */
     public DataSource getDataOutput()
@@ -648,7 +652,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
      * subsequently as keys to identify each individual track in the
      * <tt>process</tt> method. This methods should be called only once. A
      * java.lang.Error is thrown if it's called more than once.
-     * 
+     *
      * @param trackFormats
      *            an array for formats specifying the formats for each track in
      *            the multiplexer.
@@ -725,7 +729,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
     /**
      * Process the buffer and multiplex it with data from other tracks. The
      * multiplexed output is sent to the output <tt>DataSource</tt>.
-     * 
+     *
      * @param buffer
      *            the input buffer
      * @param trackID
@@ -779,7 +783,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
 
     /**
      * Set the output content-type.
-     * 
+     *
      * @param outputContentDescriptor
      *            the content-type of the output.
      * @exception UnsupportedFormatException
