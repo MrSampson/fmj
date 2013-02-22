@@ -97,6 +97,8 @@ public class RTPSourceStream
         dsource = datasource;
         datasource.setSourceStream(this);
 
+        Log.info("Creating RTPSourceStream " + this.hashCode() +", for datasource " + datasource.hashCode() + "(SSRC="+datasource.getSSRC()+")");
+
         q = new JitterBufferSimple(maxJitterQueueSize);
         createThread();
     }
@@ -331,7 +333,7 @@ public class RTPSourceStream
 
     public void start()
     {
-        Log.info("Starting RTPSourceStream");
+        Log.info("Starting RTPSourceStream " + this.hashCode());
         synchronized (startReq)
         {
             started = true;
