@@ -341,10 +341,17 @@ public class RTPSourceStream
 
     public void stop()
     {
-        Log.info("Stopping RTPSourceStream, dumping stack trace (this is not " +
+        Log.info("Stopping RTPSourceStream " + this.hashCode() +" , dumping stack trace (this is not " +
                 "an error)");
+        StringBuffer buf = new StringBuffer();
         for(StackTraceElement s : new Throwable().getStackTrace())
-            Log.info(s.toString());
+        {
+          buf.append(s.toString());
+          buf.append("\n");
+        }
+
+        Log.info(buf.toString());
+
         synchronized (startReq)
         {
             started = false;
