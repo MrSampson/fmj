@@ -144,6 +144,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
                 {
                 }
             }
+            Log.info("Closing RawBufferMux " + this.hashCode());
         }
 
         public Format getFormat()
@@ -251,6 +252,9 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
         {
             if (closed)
             {
+                 Log.info("Trying to read from RawBufferMux " +
+                          this.hashCode() +
+                          " with closed source stream");
                 throw new IOException("The source stream is closed");
             }
 

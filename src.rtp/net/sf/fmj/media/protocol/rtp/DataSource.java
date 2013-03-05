@@ -208,7 +208,8 @@ public class DataSource extends BasicPushBufferDataSource implements
     public void prebuffer()
     {
         started = true;
-        srcStreams[0].prebuffer();
+//      srcStreams[0].prebuffer(); //Doesn't actually do anything and
+//tnothing calls this so ignoring...
     }
 
     public void setBufferListener(BufferListener listener)
