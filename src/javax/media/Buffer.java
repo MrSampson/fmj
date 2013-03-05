@@ -93,6 +93,8 @@ public class Buffer
      */
     protected long sequenceNumber = SEQUENCE_UNKNOWN;
 
+	public long setTEDTime = 0;
+
     /**
      * Indicates that this <tt>Buffer</tt> marks the end of media for the data
      * stream. The Buffer might or might not contain valid data to be processed.
@@ -140,6 +142,7 @@ public class Buffer
      * not be dropped or waited on if it's behind or ahead of schedule.
      */
     public final static int FLAG_NO_SYNC = (FLAG_NO_DROP | FLAG_NO_WAIT);
+    //This isn't set/used for our audio...
 
     /**
      * Indicates that the <tt>Buffer</tt> carries a time stamp that's relative
@@ -198,6 +201,7 @@ public class Buffer
      * buffer object to reduce the underflow.
      */
     public final static int FLAG_BUF_UNDERFLOWN = (1 << 14);
+    
 
     /**
      * Indicates that the data is arriving from a live (real-time) source.
@@ -299,6 +303,7 @@ public class Buffer
         duration = buffer.duration;
         sequenceNumber = buffer.sequenceNumber;
         flags = buffer.flags;
+        setTEDTime = buffer.setTEDTime;
     }
 
     /**
@@ -538,6 +543,7 @@ public class Buffer
      */
     public void setFlags(int flags)
     {
+//    	System.out.println(String.format("%16s", Integer.toBinaryString(flags)).replace(' ', '0'));
         this.flags = flags;
     }
 

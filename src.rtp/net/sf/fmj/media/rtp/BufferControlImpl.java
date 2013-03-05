@@ -193,6 +193,8 @@ public class BufferControlImpl implements BufferControl
 
     public long getBufferLength()
     {
+    	new Exception().printStackTrace();
+    	System.err.println("3Render buffer length set: " + currBuffer);
         return currBuffer;
     }
 

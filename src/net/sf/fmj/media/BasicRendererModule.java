@@ -7,6 +7,7 @@ import net.sf.fmj.filtergraph.*;
 import net.sf.fmj.media.renderer.audio.*;
 import net.sf.fmj.media.rtp.util.*;
 import net.sf.fmj.media.util.*;
+import net.sf.fmj.utility.LoggingStringUtils;
 
 /**
  * BasicRenderer is a module which have InputConnectors and no OutputConnectors.
@@ -808,6 +809,12 @@ public class BasicRendererModule extends BasicSinkModule implements
     protected boolean scheduleBuffer(Buffer buf)
     {
         int rc = PlugIn.BUFFER_PROCESSED_OK;
+        if (buf.getFlags() != 0)
+        {
+        	System.out.println(String.format("%16s", Integer.toBinaryString(buf.getFlags())).replace(' ', '0'));
+        	System.out.println(LoggingStringUtils.bufferFlagsToStr(buf.getFlags()));
+        }
+
 
         Format format = buf.getFormat();
 
@@ -833,6 +840,7 @@ public class BasicRendererModule extends BasicSinkModule implements
                 && moduleListener != null)
         {
             moduleListener.markedDataArrived(this, buf);
+            System.out.println("Marked Data has arrived");
             buf.setFlags(buf.getFlags() & ~Buffer.FLAG_SYSTEM_MARKER);
         }
 

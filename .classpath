@@ -32,5 +32,6 @@
 	<classpathentry kind="lib" path="lib/jogg-0.0.7.jar"/>
 	<classpathentry kind="src" path="src.ds"/>
 	<classpathentry kind="src" path="src.utils"/>
+	<classpathentry kind="lib" path="lib/jchart2d-3.2.2.jar"/>
 	<classpathentry kind="output" path="build/classes.eclipse"/>
 </classpath>

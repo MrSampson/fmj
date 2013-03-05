@@ -327,7 +327,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
     private long latency = 0;
 
     protected Container container = null;
-    static public boolean TRACE_ON = false;
+    static public boolean TRACE_ON = true; //TED TODO
     // Controls.
     protected BasicTrackControl trackControls[] = new BasicTrackControl[0];
 
@@ -1829,6 +1829,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
                 }
                 latency = (t + latency) / 2;
             }
+            System.out.println(String.format("Instant Latency: %s Average Latency: %s", t/1000000, latency/1000000));
         }
     }
 

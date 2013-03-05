@@ -36,6 +36,8 @@ public class CircularBuffer
      */
     public CircularBuffer(int n)
     {
+//    	new Exception().printStackTrace();
+//    	System.err.println("Created CircularBuffer with length " + n);
         size = n;
         buf = new Buffer[n];
         for (int i = 0; i < n; i++)

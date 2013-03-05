@@ -1,5 +1,9 @@
 package net.sf.fmj.media.rtp;
 
+import info.monitorenter.gui.chart.Chart2D;
+import info.monitorenter.gui.chart.ITrace2D;
+import info.monitorenter.gui.chart.traces.Trace2DLtd;
+
 import java.awt.*;
 
 import javax.media.*;
@@ -103,6 +107,42 @@ public class RTPSourceStream
         createThread();
     }
 
+    public static Chart2D chart = null;
+    public static int datapointsToKeep = 400;
+    private ITrace2D intrace = null;
+    private ITrace2D outtrace = null;
+    private ITrace2D sizetrace = null;
+    private long lastArrivalTimeNanos = System.nanoTime();
+    private long lastDepartureTimeNanos = System.nanoTime();
+    
+    private boolean shouldChart()
+    {
+    	if (intrace != null)
+    	{
+    		return true;
+    	}
+    	
+    	if (chart != null)
+    	{
+    		intrace = new Trace2DLtd(datapointsToKeep, String.valueOf(dsource.getSSRC() + " IN Delta (ms)"));
+    		intrace.setColor(Color.red);
+    		
+    		outtrace = new Trace2DLtd(datapointsToKeep, String.valueOf(dsource.getSSRC() + " OUT Delta (ms)"));
+    		outtrace.setColor(Color.green);
+    		
+    		sizetrace = new Trace2DLtd(datapointsToKeep, String.valueOf(dsource.getSSRC() + " Size"));
+    		sizetrace.setColor(Color.black);
+    		
+    		chart.addTrace(intrace);
+//    		chart.addTrace(outtrace);
+//    		chart.addTrace(sizetrace);
+    		
+    		return true;
+    	}
+    	
+    	return false;
+    }
+    
     /**
      * Adds <tt>buffer</tt> to the queue.
      *
@@ -247,8 +287,15 @@ public class RTPSourceStream
 //            buffer.setDiscard(true);
 //            return;
 //        }
-//
-
+//        
+        if (shouldChart())
+        {
+        	long timeNow = System.nanoTime();
+//        	outtrace.addPoint(timeNow, (timeNow - lastDepartureTimeNanos)/1000000);
+//        	sizetrace.addPoint(timeNow,q.getCurrentSize());
+        	lastDepartureTimeNanos = timeNow;
+        }    	
+        
         Buffer bufferFromQueue = lastRead;
         lastRead = null;
                     lastSeqSent = bufferFromQueue.getSequenceNumber();

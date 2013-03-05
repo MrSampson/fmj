@@ -50,6 +50,7 @@ public abstract class AudioRenderer extends BasicPlugIn implements Renderer,
 
         public long getBufferLength()
         {
+        	System.out.println("Returned buffer length " + bufLenReq);
             return bufLenReq;
         }
 
@@ -81,7 +82,8 @@ public abstract class AudioRenderer extends BasicPlugIn implements Renderer,
                 bufLenReq = DefaultMaxBufferSize;
             else
                 bufLenReq = time;
-            // System.err.println("Render buffer length set: " + bufLenReq);
+             System.err.println("Render buffer length set: " + bufLenReq);
+            // 
             return bufLenReq;
         }
 

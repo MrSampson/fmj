@@ -51,6 +51,13 @@ public class RTPDemultiplexer
             buffer.setFlags(buffer.getFlags() | Buffer.FLAG_RTP_TIME);
             buffer.setSequenceNumber(rtpPacket.seqnum);
             buffer.setFormat(info.dstream.getFormat());
+            
+//            if (rtpPacket.seqnum % 5 == 0) // Every 5th packet
+//            {
+            	buffer.setFlags(buffer.getFlags() | Buffer.FLAG_SID);
+            	buffer.setTEDTime = System.nanoTime();
+//            }
+            
             info.dstream.add(buffer);
         }
     }
