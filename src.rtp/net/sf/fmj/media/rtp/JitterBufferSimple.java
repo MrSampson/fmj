@@ -1,64 +1,112 @@
+
 package net.sf.fmj.media.rtp;
 
+import java.util.*;
 import java.util.concurrent.*;
 
 import javax.media.*;
 
-public class JitterBufferSimple {
+import net.sf.fmj.media.*;
 
-	final private LinkedBlockingQueue<Buffer> q;
-	final private int maxCapacity;
+/**
+ * A simple jitter buffer based on existing Java data structures.
+ */
+public class JitterBufferSimple
+{
+    final private PriorityBlockingQueue<Buffer> q;
+    final private int                           maxCapacity;
 
-	public JitterBufferSimple(int maxCapacity) {
-		this.maxCapacity = maxCapacity;
-		q = new LinkedBlockingQueue<Buffer>(maxCapacity);
-	}
+    /**
+     * Creates a new JB
+     *
+     * @param maxCapacity The most packets that the queue will hold.
+     */
+    public JitterBufferSimple(int maxCapacity)
+    {
+        this.maxCapacity = maxCapacity;
+        q = new PriorityBlockingQueue<Buffer>(maxCapacity, new Comparator<Buffer>()
+        {
 
-	public boolean isFull() {
-		return q.remainingCapacity() == 0;
-	}
+            @Override
+            public int compare(Buffer buf1, Buffer buf2)
+            {
+                return (int)(buf1.getSequenceNumber() - buf2.getSequenceNumber()); //I haven't thought if this is right.
+            }
+        });
+    }
 
-	public boolean isEmpty() {
-		return q.size() == 0;
-	}
+    /**
+     * @return True when the JB is full.
+     */
+    public boolean isFull()
+    {
+        return q.remainingCapacity() == 0;
+    }
 
-	public void dropOldest() {
-		q.poll();
-	}
+    /**
+     * @return True when the JB is empty
+     */
+    public boolean isEmpty()
+    {
+        return q.size() == 0;
+    }
 
-	public void add(Buffer freeBuffer) {
-		q.offer(freeBuffer);
-		//TODO we're ignoring the return code here but we should log it.
-	}
+    /**
+     * Drop the oldest packet in the JB.
+     */
+    public void dropOldest()
+    {
+        q.poll();
+    }
 
-	/**
-	 *  Blocking until data is available.
-	 * @return
-	 */
-	public Buffer get() {
-		Buffer retVal = null;
-		while (retVal == null)
-		{
-		try
-		{
-			retVal = q.take();
-		}
-		catch (InterruptedException e)
-		{
-		}
-	}
-		return retVal;
-	}
+    /**
+     * Add a buffer to the JB
+     *
+     * @param buffer The buffer to add.
+     */
+    public void add(Buffer buffer)
+    {
+        boolean success = q.offer(buffer);
+        if (!success)
+        {
+            Log.warning("Failed to add a buffer to jitter buffer. This is usually because it is full.");
+        }
+    }
 
-	public int getMaxSize() {
-		return maxCapacity;
-	}
+    /**
+     * Get a buffer from the jitter buffer, blocking until data is available.
+     *
+     * @return the buffer.
+     */
+    public Buffer get()
+    {
+        Buffer retVal = null;
 
-	public int getCurrentSize() {
-		return q.size();
-	}
+        while (retVal == null)
+        {
+            try
+            {
+                retVal = q.take();
+            }
+            catch (InterruptedException e)
+            {
+            }
+        }
+        return retVal;
+    }
 
-	public void reset() {
-		q.clear();
-	}
+    public int getMaxSize()
+    {
+        return maxCapacity;
+    }
+
+    public int getCurrentSize()
+    {
+        return q.size();
+    }
+
+    public void reset()
+    {
+        q.clear();
+    }
 }
