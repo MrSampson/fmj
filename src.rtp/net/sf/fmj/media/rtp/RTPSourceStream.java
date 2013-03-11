@@ -38,6 +38,7 @@ public class RTPSourceStream
 
     private boolean started = false;
     private boolean killed = false;
+    private boolean loggedEmpty = false;
 
     private Object startReq;
     private RTPMediaThread thread = null;
@@ -158,6 +159,8 @@ public class RTPSourceStream
         return format;
     }
 
+
+
     /**
      * Pops an element off the queue and copies it to <tt>buffer</tt>. The data
      * and header arrays of <tt>buffer</tt> are reused.
@@ -168,12 +171,20 @@ public class RTPSourceStream
     @Override
     public void read(Buffer buffer)
     {
-        if (q.isEmpty())
-        {
-            Log.warning(String.format("Read from RTPSourceStream %s when empty", this.hashCode()));
-            buffer.setDiscard(true);
-            return;
-        }
+//        if (q.isEmpty())
+//        {
+//            if (! loggedEmpty)
+//            {
+//                Log.warning(String.format("Read from RTPSourceStream %s when empty", this.hashCode()));
+//                loggedEmpty = true;
+//            }
+//            buffer.setDiscard(true);
+//            return;
+//        }
+//        else
+//        {
+//            loggedEmpty = false;
+//        }
 
         Buffer bufferFromQueue = lastRead;
         lastRead = null;
