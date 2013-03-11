@@ -56,7 +56,9 @@ public class JitterBufferSimple
      */
     public void dropOldest()
     {
-        q.poll();
+        //q.poll(); Instead of just removing the oldest, remove all to deal
+        // with skew.
+        q.clear();
     }
 
     /**
