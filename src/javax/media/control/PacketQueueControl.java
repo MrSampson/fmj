@@ -1,6 +1,6 @@
 package javax.media.control;
 
-import javax.media.Control;
+import javax.media.*;
 
 /**
  * Control for the packet queue
@@ -70,13 +70,6 @@ public interface PacketQueueControl extends Control
      * @return the current size of the queue in packets.
      */
     public int getCurrentSizePackets();
-
-    /**
-     * Returns the maximum size that the queue reached (in number of packets).
-     *
-     * @return the maximum size that the queue reached (in number of packets).
-     */
-    public int getMaxSizeReached();
 
     /**
      * Whether the adaptive jitter buffer mode is enabled.

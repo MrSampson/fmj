@@ -4,7 +4,6 @@ import java.awt.*;
 
 import javax.media.*;
 import javax.media.control.*;
-import javax.media.format.*;
 import javax.media.protocol.*;
 
 import net.sf.fmj.media.*;
@@ -12,89 +11,54 @@ import net.sf.fmj.media.protocol.*;
 import net.sf.fmj.media.protocol.rtp.DataSource;
 import net.sf.fmj.media.rtp.util.*;
 
+/**
+ *
+ */
 public class RTPSourceStream
     extends BasicSourceStream
     implements PushBufferStream, Runnable, PacketQueueControl
 {
-    private int nbAdd = 0;
-    private int nbReset = 0;
-    private int nbAppend = 0;
-    private int nbInsert = 0;
-    private int nbCutByHalf = 0;
-    private int nbGrow = 0;
-    private int nbPrepend = 0;
-    private int nbRemoveAt = 0;
-    private int nbReadWhileEmpty = 0;
-    private int nbShrink = 0;
     private int nbDiscardedFull = 0;
     private int nbDiscardedShrink = 0;
     private int nbDiscardedLate = 0;
     private int nbDiscardedReset = 0;
-    private int nbDiscardedVeryLate = 0;
-    private int maxSizeReached = 0;
 
     private void printStats()
     {
         String cn = this.getClass().getCanonicalName()+" ";
-        Log.info(cn+"Total packets added: " + nbAdd);
-        Log.info(cn+"Times reset() called: " + nbReset);
-        Log.info(cn+"Times append() called: " + nbAppend);
-        Log.info(cn+"Times insert() called: " + nbInsert);
-        Log.info(cn+"Times cutByHalf() called: " + nbCutByHalf);
-        Log.info(cn+"Times grow() called: " + nbGrow);
-        Log.info(cn+"Times shrink() called: " + nbShrink);
-        Log.info(cn+"Times prepend() called: " + nbPrepend);
-        Log.info(cn+"Times removeAt() called: " + nbRemoveAt);
-        Log.info(cn+"Times read() while empty:" + nbReadWhileEmpty);
         Log.info(cn+"Packets dropped because full: " + nbDiscardedFull);
         Log.info(cn+"Packets dropped while shrinking: " + nbDiscardedShrink);
         Log.info(cn+"Packets dropped because they were late: " + nbDiscardedLate);
-        Log.info(cn+"Packets dropped because they were late by more than MAX_SIZE: " + nbDiscardedVeryLate);
         Log.info(cn+"Packets dropped in reset(): " + nbDiscardedReset);
-        Log.info(cn + "Max size reached: " + maxSizeReached);
     }
 
     private static final int NOT_SPECIFIED = -1;
-    private DataSource dsource;
     private Format format = null;
-    BufferTransferHandler handler = null;
+    private BufferTransferHandler handler = null;
 
-    boolean started = false;
-    boolean killed = false;
-    boolean replenish = true;
+    private boolean started = false;
+    private boolean killed = false;
 
-    Object startReq;
+    private Object startReq;
     private RTPMediaThread thread = null;
     private Buffer lastRead = null;
-    private BufferControlImpl bc = null;
 
     /**
      * Sequence number of the last <tt>Buffer</tt> added to the queue.
      */
     private long lastSeqRecv = NOT_SPECIFIED;
 
-    /**
-     * Sequence number of the last <tt>Buffer</tt> read from the queue.
-     */
-    private long lastSeqSent = NOT_SPECIFIED;
-
-    private BufferListener listener = null;
-
-    private boolean prebuffering = false;
-    private boolean prebufferNotice = false;
-
-    private boolean bufferWhenStopped = true;
-    static AudioFormat mpegAudio = new AudioFormat("mpegaudio/rtp");
-    static VideoFormat mpegVideo = new VideoFormat("mpeg/rtp");
-    static VideoFormat h264Video = new VideoFormat("h264/rtp");
-	  private JitterBufferSimple q;
-
+	private JitterBufferSimple q;
 	private int maxJitterQueueSize = 8;
 
+    /**
+     * cTor
+     *
+     * @param datasource The datasource that this stream is the source for.
+     */
     public RTPSourceStream(DataSource datasource)
     {
         startReq = new Object();
-        dsource = datasource;
         datasource.setSourceStream(this);
 
         Log.info("Creating RTPSourceStream " + this.hashCode() +", for datasource " + datasource.hashCode() + "(SSRC="+datasource.getSSRC()+")");
@@ -108,93 +72,52 @@ public class RTPSourceStream
      *
      * In case the queue is full: if <tt>buffer</tt>'s sequence number comes
      * before the sequence numbers of the <tt>Buffer</tt>s in the queue, nothing
-     * is done. Otherwise, a packet is dropped using PktQue.dropPkt()
+     * is done.
      *
      * @param buffer the buffer to add
      */
     public void add(Buffer buffer)
     {
-        if (!started && !bufferWhenStopped)
-            return;
-
         long bufferSN = buffer.getSequenceNumber();
 
         if (lastSeqRecv - bufferSN > 256L)
         {
+            Log.warning(String.format("Very out of order packet added to RTPSourceStream %s", this.hashCode()));
             Log.info("Resetting queue, last seq added: " + lastSeqRecv +
                     ", current seq: " + bufferSN);
             reset();
-            lastSeqRecv = bufferSN;
-        }
-        if (lastSeqSent != NOT_SPECIFIED &&
-                bufferSN < lastSeqSent &&
-                format instanceof AudioFormat)
-            {
-            return;
         }
 
-        nbAdd++;
+
+        if (q.isFull())
+        {
+            Log.warning(String.format("RTPSourceStream %s buffer is full.", this.hashCode()));
+            nbDiscardedFull++;
+            q.dropOldest();
+        }
+
         lastSeqRecv = bufferSN;
-        boolean almostFull = false;
 
-            if (q.isFull()) //Buffer is full
-            {
-                nbDiscardedFull++;
-                q.dropOldest();
-                //now drop a packet from the buffer?
-        }
+        Buffer freeBuffer = new Buffer();
+        freeBuffer.copy(buffer);
+        freeBuffer.setFlags(freeBuffer.getFlags() | Buffer.FLAG_NO_DROP);
 
-// Check if the buffer is almost full            almostFull = true;
-
-        Buffer freeBuffer = new Buffer(); // TODO - Need a buffer pool?
-
-        // Copy the data around...
-        // TODO - Why not just add this buffer to the JB?
-        byte bufferData[] = (byte[]) buffer.getData();
-        byte freeBufferData[] = (byte[]) freeBuffer.getData(); // TODO Won't this always be empty since we just got a free buffer?
-
-        if (freeBufferData == null || freeBufferData.length < bufferData.length) //Ah - we reuse buffers to avoid object creation and this means we can avoid creating the data array
-            freeBufferData = new byte[bufferData.length];
-
-        System.arraycopy(bufferData, buffer.getOffset(), freeBufferData,
-                buffer.getOffset(), buffer.getLength());
-
-        freeBuffer.copy(buffer); //Interesting - this copies all the headers, but also appears to copy the data...
-        freeBuffer.setData(freeBufferData); //And put the data from buffer into freeBuffer...
-
-        // Set flags on the buffer, to indication that the packet shouldn't be
-        // dropped and possible that the buffer is almost full.
-//        if (almostFull) //with this packet added, the queue will be full
-//            freeBuffer.setFlags(freeBuffer.getFlags() |
-//                    Buffer.FLAG_BUF_OVERFLOWN | Buffer.FLAG_NO_DROP);
-//        else
-            freeBuffer.setFlags(freeBuffer.getFlags() | Buffer.FLAG_NO_DROP);
-
-        // Add the packet to the queue...
         q.add(freeBuffer);
+    }
 
-            if (replenish && (format instanceof AudioFormat))
-            {
-                //delay the call to notifyAll until the queue is 'replenished'
-                // - TODO this replenish stuff won't be working because I'm
-                // always "notify"ing as soon as there is data.
-                if (q.getCurrentSize() >= q.getMaxSize() / 2)
-                {
-                    replenish = false;
-                    // TODO Notify the data transfer handler that there's data ready
-                    // to be read.
-                }
-            } else
-            {
-                // TODO Notify the data transfer handler that there's data ready
-                // to be read.
-            }
-        }
-
+    /**
+     * Stop the stream and put it in the killed state.
+     */
     public void close()
     {
+        Log.info(String.format("close() RTPSourceStream %s", this.hashCode()));
+
         if (killed)
+        {
+            Log.warning(String.format("RTPSourceStream %s already closed", this.hashCode()));
             return;
+        }
+
         printStats();
         stop();
         killed = true;
@@ -208,12 +131,14 @@ public class RTPSourceStream
         // Maybe this involves putting a "kill" buffer in the stream?
 
         thread = null;
-        if (bc != null)
-            bc.removeSourceStream(this);
     }
 
+    /**
+     * Starts the stream (which starts a thread to move buffers around)
+     */
     public void connect()
     {
+        Log.info(String.format("connect() RTPSourceStream %s", this.hashCode()));
         killed = false;
         createThread();
     }
@@ -227,6 +152,7 @@ public class RTPSourceStream
         thread.start();
     }
 
+    @Override
     public Format getFormat()
     {
         return format;
@@ -239,32 +165,19 @@ public class RTPSourceStream
      * @param buffer The <tt>Buffer</tt> object to copy an element of the queue
      * to.
      */
+    @Override
     public void read(Buffer buffer)
     {
-//        if (q.isEmpty())
-//        {
-//            nbReadWhileEmpty++;
-//            buffer.setDiscard(true);
-//            return;
-//        }
-//
+        if (q.isEmpty())
+        {
+            Log.warning(String.format("Read from RTPSourceStream %s when empty", this.hashCode()));
+            buffer.setDiscard(true);
+            return;
+        }
 
         Buffer bufferFromQueue = lastRead;
         lastRead = null;
-                    lastSeqSent = bufferFromQueue.getSequenceNumber();
-
-                    buffer.copy(bufferFromQueue);
-//        bufferFromQueue.setData(bufferData);
-//        bufferFromQueue.setHeader(bufferHeader);
-//        pktQ.returnFree(bufferFromQueue);
-//        TODO Return a free packet to the jitter buffer?
-
-            if (format instanceof AudioFormat && q.isEmpty())
-                    {
-                    replenish = true; //start to replenish when the queue empties
-        }
-            // TODO Notify the data transfer handler that there's data ready
-            // to be read.
+        buffer.copy(bufferFromQueue);
     }
 
     /**
@@ -272,79 +185,95 @@ public class RTPSourceStream
      */
     public void reset()
     {
+        Log.info(String.format("reset() RTPSourceStream %s", this.hashCode()));
         q.reset();
-            lastSeqSent = NOT_SPECIFIED;
-        }
+    }
 
-	public void run() {
+	@Override
+    public void run() {
         while (true)
-			try {
-				synchronized (startReq) {
-                    while ((!started || prebuffering) && !killed)
+            try
+            {
+                synchronized (startReq)
+                {
+                    while ((!started) && !killed)
+                    {
+                        // Block waiting for the stream to be started
                         startReq.wait();
+                    }
                 }
 
-				if (lastRead == null && !killed) {
-					lastRead = q.get();
+                if (lastRead == null && !killed)
+                {
+                    lastRead = q.get();
                 }
 
-				if (killed) {
+                if (killed)
+                {
+                    Log.info(String.format("Ending thread for RTPSourceStream %s", this.hashCode()));
                     break;
+                }
+                if (handler != null)
+                {
+                    handler.transferData(this);
+                }
             }
-				if (handler != null) {
-					handler.transferData(this);
+            catch (InterruptedException interruptedexception)
+            {
+                Log.error("Thread " + interruptedexception.getMessage());
             }
-			} catch (InterruptedException interruptedexception) {
-				Log.error("Thread " + interruptedexception.getMessage());
-        }
     }
 
-    public void setBufferControl(BufferControl buffercontrol)
-    {
-        bc = (BufferControlImpl) buffercontrol;
-        updateBuffer(bc.getBufferLength());
-        updateThreshold(bc.getMinimumThreshold());
-    }
-
-    public void setBufferListener(BufferListener bufferlistener)
-    {
-        listener = bufferlistener;
-    }
-
+    /**
+     * @param flag
+     */
     public void setBufferWhenStopped(boolean flag)
     {
-        bufferWhenStopped = flag;
+        //Nothing calls it so removing
     }
 
+    /**
+     * @param s
+     */
     void setContentDescriptor(String s)
     {
         super.contentDescriptor = new ContentDescriptor(s);
     }
 
+    /**
+     * @param format1
+     */
     protected void setFormat(Format format1)
     {
         format = format1;
     }
 
+    @Override
     public void setTransferHandler(BufferTransferHandler buffertransferhandler)
     {
         handler = buffertransferhandler;
     }
 
+    /**
+     * Puts the source stream into the "started" state
+     */
     public void start()
     {
-        Log.info("Starting RTPSourceStream " + this.hashCode());
+        Log.info(String.format("start() RTPSourceStream %s", this.hashCode()));
         synchronized (startReq)
         {
             started = true;
+            // Wake up the thread.
             startReq.notifyAll();
         }
     }
 
+    /**
+     * Puts the source stream in the "stop" state.
+     */
     public void stop()
     {
-        Log.info("Stopping RTPSourceStream " + this.hashCode() +" , dumping stack trace (this is not " +
-                "an error)");
+        Log.info(String.format("stop() RTPSourceStream %s", this.hashCode()));
         StringBuffer buf = new StringBuffer();
         for(StackTraceElement s : new Throwable().getStackTrace())
         {
@@ -357,109 +286,7 @@ public class RTPSourceStream
         synchronized (startReq)
         {
             started = false;
-            prebuffering = false;
-            if (!bufferWhenStopped)
-                reset();
         }
-    }
-
-    public long updateBuffer(long l)
-    {
-        return l;
-    }
-
-    public long updateThreshold(long l)
-    {
-        return l;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public int getDiscarded()
-    {
-        return nbDiscardedFull + nbDiscardedLate +
-               nbDiscardedReset + nbDiscardedShrink + nbDiscardedVeryLate;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public int getDiscardedShrink()
-    {
-        return nbDiscardedShrink;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public int getDiscardedLate()
-    {
-        return nbDiscardedLate;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public int getDiscardedReset()
-    {
-        return nbDiscardedReset;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public int getDiscardedFull()
-    {
-        return nbDiscardedFull;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public int getCurrentDelayMs()
-    {
-        return (int) (getCurrentDelayPackets() * 20); //TODO
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public int getCurrentDelayPackets()
-    {
-        return  999; //TODO
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public int getCurrentSizePackets()
-    {
-        return maxJitterQueueSize;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public int getMaxSizeReached()
-    {
-        return maxSizeReached;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public boolean isAdaptiveBufferEnabled()
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public int getCurrentPacketCount()
-    {
-        return q.getCurrentSize();
     }
 
     /**
@@ -467,6 +294,7 @@ public class RTPSourceStream
      *
      * @return <tt>null</tt>
      */
+    @Override
     public Component getControlComponent()
     {
         return null;
@@ -475,27 +303,121 @@ public class RTPSourceStream
     /**
      * {@inheritDoc}
      */
+    @Override
     public Object getControl(String controlType)
     {
-        if(PacketQueueControl.class.getName().equals(controlType))
+        if (PacketQueueControl.class.getName().equals(controlType))
         {
             return this;
         }
-        else
-        {
-            return super.getControl(controlType);
-        }
+
+        return super.getControl(controlType);
     }
 
     /**
      * {@inheritDoc}
      */
+    @Override
     public Object[] getControls()
     {
         Object[] superControls = super.getControls();
-        Object[] controls = new Object[superControls.length + 1];
-        System.arraycopy(superControls, 0, controls, 0, superControls.length);
-        controls[superControls.length] = this;
-        return controls;
+        Object[] superControlsAndThis = new Object[superControls.length + 1];
+        System.arraycopy(superControls, 0, superControlsAndThis, 0, superControls.length);
+        superControlsAndThis[superControls.length] = this;
+        return superControlsAndThis;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Getters for STATS
+    ////////////////////////////////////////////////////////////////////////////
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getDiscarded()
+    {
+        return nbDiscardedFull + nbDiscardedLate +
+               nbDiscardedReset + nbDiscardedShrink;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getDiscardedShrink()
+    {
+        return nbDiscardedShrink;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getDiscardedLate()
+    {
+        return nbDiscardedLate;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getDiscardedReset()
+    {
+        return nbDiscardedReset;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getDiscardedFull()
+    {
+        return nbDiscardedFull;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getCurrentDelayMs()
+    {
+        return getCurrentDelayPackets() * 20; //Assuming fixed packetization interval
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getCurrentDelayPackets()
+    {
+        return  q.getCurrentSize();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getCurrentSizePackets()
+    {
+        return maxJitterQueueSize;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isAdaptiveBufferEnabled()
+    {
+        return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getCurrentPacketCount()
+    {
+        return q.getCurrentSize();
     }
 }

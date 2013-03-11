@@ -188,7 +188,7 @@ public class BufferControlImpl implements BufferControl
     protected void addSourceStream(RTPSourceStream s)
     {
         sourcestreamlist.addElement(s);
-        s.setBufferControl(this);
+//        s.setBufferControl(this); Unused so removing
     }
 
     public long getBufferLength()
@@ -273,6 +273,7 @@ public class BufferControlImpl implements BufferControl
             currBuffer = time;
             return time;
         }
+
         if (time == DEFAULT_VALUE)
             time = defBuffer;
         if (time == MAX_VALUE)
@@ -285,9 +286,11 @@ public class BufferControlImpl implements BufferControl
             currBuffer = defBuffer;
         else
             currBuffer = time;
-        for (int i = 0; i < sourcestreamlist.size(); i++)
-            ((RTPSourceStream) sourcestreamlist.elementAt(i))
-                    .updateBuffer(currBuffer);
+
+//        for (int i = 0; i < sourcestreamlist.size(); i++)
+//            ((RTPSourceStream) sourcestreamlist.elementAt(i))
+//                    .updateBuffer(currBuffer);
+//        Commented out as the code does nothing
 
         if (controlComp != null)
             controlComp.updateBuffer(currBuffer);
@@ -320,9 +323,10 @@ public class BufferControlImpl implements BufferControl
             currThreshold = t;
         if (t < 0L)
             currThreshold = 0L;
-        for (int i = 0; i < sourcestreamlist.size(); i++)
-            ((RTPSourceStream) sourcestreamlist.elementAt(i))
-                    .updateThreshold(currThreshold);
+//        for (int i = 0; i < sourcestreamlist.size(); i++)
+//            ((RTPSourceStream) sourcestreamlist.elementAt(i))
+//                    .updateThreshold(currThreshold);
+//        commented out as code does nothing
 
         if (controlComp != null)
             controlComp.updateThreshold(currThreshold);
