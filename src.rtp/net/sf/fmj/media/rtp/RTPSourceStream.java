@@ -1,6 +1,7 @@
 package net.sf.fmj.media.rtp;
 
 import java.awt.*;
+import java.util.concurrent.atomic.*;
 
 import javax.media.*;
 import javax.media.control.*;
@@ -18,10 +19,12 @@ public class RTPSourceStream
     extends BasicSourceStream
     implements PushBufferStream, Runnable, PacketQueueControl
 {
-    private int nbDiscardedFull = 0;
+    private int nbDiscardedFull   = 0;
     private int nbDiscardedShrink = 0;
-    private int nbDiscardedLate = 0;
-    private int nbDiscardedReset = 0;
+    private int nbDiscardedLate   = 0;
+    private int nbDiscardedReset  = 0;
+    private int nbTimesReset      = 0;
+    AtomicInteger totalPackets = new AtomicInteger(0);
 
     private void printStats()
     {
@@ -30,6 +33,7 @@ public class RTPSourceStream
         Log.info(cn+"Packets dropped while shrinking: " + nbDiscardedShrink);
         Log.info(cn+"Packets dropped because they were late: " + nbDiscardedLate);
         Log.info(cn+"Packets dropped in reset(): " + nbDiscardedReset);
+        Log.info(cn+"Number of resets(): " + nbTimesReset);
     }
 
     private static final int NOT_SPECIFIED = -1;
@@ -38,9 +42,9 @@ public class RTPSourceStream
 
     private boolean started = false;
     private boolean killed = false;
-    private boolean loggedEmpty = false;
 
     private Object startReq;
+
     private RTPMediaThread thread = null;
     private Buffer lastRead = null;
 
@@ -49,8 +53,8 @@ public class RTPSourceStream
      */
     private long lastSeqRecv = NOT_SPECIFIED;
 
-	private JitterBufferSimple q;
-	private int maxJitterQueueSize = 8;
+	public JitterBufferSimple q;
+	public final int maxJitterQueueSize = 8;
 
     /**
      * cTor
@@ -80,21 +84,13 @@ public class RTPSourceStream
     public void add(Buffer buffer)
     {
         long bufferSN = buffer.getSequenceNumber();
-
-        if (lastSeqRecv - bufferSN > 256L)
-        {
-            Log.warning(String.format("Very out of order packet added to RTPSourceStream %s", this.hashCode()));
-            Log.info("Resetting queue, last seq added: " + lastSeqRecv +
-                    ", current seq: " + bufferSN);
-            reset();
-        }
-
+        totalPackets.incrementAndGet();
 
         if (q.isFull())
         {
             Log.warning(String.format("RTPSourceStream %s buffer is full.", this.hashCode()));
-            nbDiscardedFull++;
-            q.dropOldest();
+//            nbDiscardedFull += q.dropOldest();
+            reset();
         }
 
         lastSeqRecv = bufferSN;
@@ -197,6 +193,8 @@ public class RTPSourceStream
     public void reset()
     {
         Log.info(String.format("reset() RTPSourceStream %s", this.hashCode()));
+        nbDiscardedReset+= q.getCurrentSize();
+        nbTimesReset ++;
         q.reset();
     }
 
@@ -341,6 +339,11 @@ public class RTPSourceStream
     ////////////////////////////////////////////////////////////////////////////
     // Getters for STATS
     ////////////////////////////////////////////////////////////////////////////
+    public int getTimesReset()
+    {
+        return nbTimesReset;
+    }
+
     /**
      * {@inheritDoc}
      */

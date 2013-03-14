@@ -15,6 +15,10 @@ public class JitterBufferSimple
 {
     final private PriorityBlockingQueue<Buffer> q;
     final private int                           maxCapacity;
+    final private int                           fullRange      = 65536;
+    final private int                           oneThirdRange  = fullRange / 3;
+    final private int                           twoThirdsRange = fullRange -
+                                                                 oneThirdRange;
 
     /**
      * Creates a new JB
@@ -24,13 +28,38 @@ public class JitterBufferSimple
     public JitterBufferSimple(int maxCapacity)
     {
         this.maxCapacity = maxCapacity;
-        q = new PriorityBlockingQueue<Buffer>(maxCapacity, new Comparator<Buffer>()
+        q = new PriorityBlockingQueue<Buffer>(maxCapacity , new Comparator<Buffer>()
         {
 
             @Override
             public int compare(Buffer buf1, Buffer buf2)
             {
-                return (int)(buf1.getSequenceNumber() - buf2.getSequenceNumber()); //I haven't thought if this is right.
+                // This needs to return 0  if buf1 == buf2
+                //                    -ve  if buf1 <  buf2
+                //                    +ve  if buf1 >  buf2
+                // For example, if buf1 is 50 and buf2 is 53 then return -ve
+                // When wrapping, e.g. buf1 is 65535 and buf2 is 2 then we
+                // still need to return a -ve number (even though buf1 has a
+                // greater magnitude)
+                //
+                // One way to achieve this wrapping behaviour is to add
+                // the fullRange of sequenceNumbers if one of them has wrapped.
+                long buf1SeqNo = buf1.getSequenceNumber();
+                long buf2SeqNo = buf2.getSequenceNumber();
+
+                if (buf1SeqNo < oneThirdRange && buf2SeqNo > twoThirdsRange)
+                {
+                    buf1SeqNo += fullRange;
+                }
+
+                if (buf2SeqNo < oneThirdRange && buf1SeqNo > twoThirdsRange)
+                {
+                    buf2SeqNo += fullRange;
+                }
+
+                int result = (int)(buf1SeqNo - buf2SeqNo);
+
+                return result;
             }
         });
     }
@@ -40,7 +69,8 @@ public class JitterBufferSimple
      */
     public boolean isFull()
     {
-        return q.remainingCapacity() == 0;
+//        return q.remainingCapacity() == 0;
+        return remainingCapacity() == 0;
     }
 
     /**
@@ -56,9 +86,7 @@ public class JitterBufferSimple
      */
     public void dropOldest()
     {
-        //q.poll(); Instead of just removing the oldest, remove all to deal
-        // with skew.
-        q.clear();
+        q.poll();
     }
 
     /**
@@ -68,11 +96,19 @@ public class JitterBufferSimple
      */
     public void add(Buffer buffer)
     {
-        boolean success = q.offer(buffer);
+        boolean success = false;
+        success = q.offer(buffer);
+
         if (!success)
         {
             Log.warning("Failed to add a buffer to jitter buffer. This is usually because it is full.");
         }
+    }
+
+    private int remainingCapacity()
+    {
+     return maxCapacity - q.size();
+//      q.remainingCapacity();
     }
 
     /**
@@ -94,6 +130,7 @@ public class JitterBufferSimple
             {
             }
         }
+
         return retVal;
     }
 
