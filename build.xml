@@ -100,6 +100,7 @@
             <src path="src.utils"/>
             <exclude name="**/civil/**"/>
             <exclude name="net/sf/fmj/media/cdp/GlobalCaptureDevicePlugger.java"/>
+        	<exclude name="**/RTPSourceStreamTest.java"/>
             <exclude name="net/sf/fmj/ejmf/toolkit/gui/**"/>
             <exclude name="net/java/**"/>
             <exclude name="net/sf/fmj/apps/**"/>
