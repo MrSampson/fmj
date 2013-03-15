@@ -14,7 +14,7 @@ import net.sf.fmj.media.*;
 public class JitterBufferSimple
 {
     final private PriorityBlockingQueue<Buffer> q;
-    final private int                           maxCapacity;
+    public int                           maxCapacity;
     final private int                           fullRange      = 65536;
     final private int                           oneThirdRange  = fullRange / 3;
     final private int                           twoThirdsRange = fullRange -

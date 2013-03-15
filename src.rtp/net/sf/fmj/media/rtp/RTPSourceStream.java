@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.*;
 
 import javax.media.*;
 import javax.media.control.*;
+import javax.media.format.*;
 import javax.media.protocol.*;
 
 import net.sf.fmj.media.*;
@@ -54,7 +55,7 @@ public class RTPSourceStream
     private long lastSeqRecv = NOT_SPECIFIED;
 
 	public JitterBufferSimple q;
-	public final int maxJitterQueueSize = 12;
+	public int maxJitterQueueSize = 8;
 
     /**
      * cTor
@@ -83,7 +84,6 @@ public class RTPSourceStream
      */
     public void add(Buffer buffer)
     {
-        long bufferSN = buffer.getSequenceNumber();
         totalPackets.incrementAndGet();
 
         if (q.isFull())
@@ -93,38 +93,10 @@ public class RTPSourceStream
             reset();
         }
 
-//
-//        Buffer freeBuffer = new Buffer();
-//        freeBuffer.copy(buffer);
-//        freeBuffer.setFlags(freeBuffer.getFlags() | Buffer.FLAG_NO_DROP);
+        Buffer newBuffer = (Buffer)buffer.clone();
+        newBuffer.setFlags(newBuffer.getFlags() | Buffer.FLAG_NO_DROP);
 
-
-
-        Buffer freeBuffer = new Buffer(); // TODO - Need a buffer pool?
-        // Copy the data around...
-        // TODO - Why not just add this buffer to the JB?
-        byte bufferData[] = (byte[]) buffer.getData();
-        byte freeBufferData[] = (byte[]) freeBuffer.getData(); // TODO Won't this always be empty since we just got a free buffer?
-        if (freeBufferData == null || freeBufferData.length < bufferData.length) //Ah - we reuse buffers to avoid object creation and this means we can avoid creating the data array
-            freeBufferData = new byte[bufferData.length];
-        System.arraycopy(bufferData, buffer.getOffset(), freeBufferData,
-                buffer.getOffset(), buffer.getLength());
-        freeBuffer.copy(buffer); //Interesting - this copies all the headers, but also appears to copy the data...
-        freeBuffer.setData(freeBufferData); //And put the data from buffer into freeBuffer...
-        // Set flags on the buffer, to indication that the packet shouldn't be
-        // dropped and possible that the buffer is almost full.
-            freeBuffer.setFlags(freeBuffer.getFlags() | Buffer.FLAG_NO_DROP);
-
-
-
-
-
-
-
-
-
-
-        q.add(freeBuffer);
+        q.add(newBuffer);
     }
 
     /**
@@ -275,11 +247,18 @@ public class RTPSourceStream
     }
 
     /**
-     * @param format1
+     * @param format
      */
-    protected void setFormat(Format format1)
+    protected void setFormat(Format format)
     {
-        format = format1;
+        this.format = format;
+        if (format instanceof VideoFormat)
+        {
+            //Set the buffer to be much bigger
+            Log.info(String.format("RTPSourceStream %s set format to video. Adjusting jitter buffer length", this.hashCode()));
+            maxJitterQueueSize = 128;
+            q.maxCapacity = 128;
+        }
     }
 
     @Override
