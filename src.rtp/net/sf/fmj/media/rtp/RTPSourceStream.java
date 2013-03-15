@@ -54,7 +54,7 @@ public class RTPSourceStream
     private long lastSeqRecv = NOT_SPECIFIED;
 
 	public JitterBufferSimple q;
-	public final int maxJitterQueueSize = 8;
+	public final int maxJitterQueueSize = 12;
 
     /**
      * cTor
@@ -93,11 +93,36 @@ public class RTPSourceStream
             reset();
         }
 
-        lastSeqRecv = bufferSN;
+//
+//        Buffer freeBuffer = new Buffer();
+//        freeBuffer.copy(buffer);
+//        freeBuffer.setFlags(freeBuffer.getFlags() | Buffer.FLAG_NO_DROP);
 
-        Buffer freeBuffer = new Buffer();
-        freeBuffer.copy(buffer);
-        freeBuffer.setFlags(freeBuffer.getFlags() | Buffer.FLAG_NO_DROP);
+
+
+        Buffer freeBuffer = new Buffer(); // TODO - Need a buffer pool?
+        // Copy the data around...
+        // TODO - Why not just add this buffer to the JB?
+        byte bufferData[] = (byte[]) buffer.getData();
+        byte freeBufferData[] = (byte[]) freeBuffer.getData(); // TODO Won't this always be empty since we just got a free buffer?
+        if (freeBufferData == null || freeBufferData.length < bufferData.length) //Ah - we reuse buffers to avoid object creation and this means we can avoid creating the data array
+            freeBufferData = new byte[bufferData.length];
+        System.arraycopy(bufferData, buffer.getOffset(), freeBufferData,
+                buffer.getOffset(), buffer.getLength());
+        freeBuffer.copy(buffer); //Interesting - this copies all the headers, but also appears to copy the data...
+        freeBuffer.setData(freeBufferData); //And put the data from buffer into freeBuffer...
+        // Set flags on the buffer, to indication that the packet shouldn't be
+        // dropped and possible that the buffer is almost full.
+            freeBuffer.setFlags(freeBuffer.getFlags() | Buffer.FLAG_NO_DROP);
+
+
+
+
+
+
+
+
+
 
         q.add(freeBuffer);
     }
