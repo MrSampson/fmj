@@ -1,6 +1,7 @@
 package net.sf.fmj.media.rtp;
 
 import java.awt.*;
+import java.util.*;
 import java.util.concurrent.atomic.*;
 
 import javax.media.*;
@@ -11,14 +12,28 @@ import javax.media.protocol.*;
 import net.sf.fmj.media.*;
 import net.sf.fmj.media.protocol.*;
 import net.sf.fmj.media.protocol.rtp.DataSource;
-import net.sf.fmj.media.rtp.util.*;
 
 /**
+ * The RTPSource stream is passed packets, buffers them in a jitter buffer and
+ * passes them onto a BufferTransferHandler<p>
  *
+ * It can be in one of a number of states
+ * <ul>
+ * <li>Newly created/Closed - No thread running.</li>
+ * <li>Started/Stopped - controls the started flag.</li>
+ * <ul><li>The thread only does something when started=true</li>
+ *     <li>Items are only added to the queue if started=true</li>
+ * </ul>
+ * <li>Connected - The thread is started</li>
+ * </ul>
+ *
+ * <p>
+ *
+ * When the RTPSourceStream isn't started, packets can still TODO
  */
 public class RTPSourceStream
     extends BasicSourceStream
-    implements PushBufferStream, Runnable, PacketQueueControl
+    implements PushBufferStream, PacketQueueControl
 {
     private int nbDiscardedFull   = 0;
     private int nbDiscardedShrink = 0;
@@ -41,13 +56,9 @@ public class RTPSourceStream
     private Format format = null;
     private BufferTransferHandler handler = null;
 
-    private boolean started = false;
-    private boolean killed = false;
-
-    private Object startReq;
-
-    private RTPMediaThread thread = null;
-    private Buffer lastRead = null;
+    private AtomicBoolean started = new AtomicBoolean();
+    private AtomicBoolean prebuffering = new AtomicBoolean();
+    private TimerTask thread = null;
 
     /**
      * Sequence number of the last <tt>Buffer</tt> added to the queue.
@@ -57,6 +68,8 @@ public class RTPSourceStream
 	public JitterBufferSimple q;
 	public int maxJitterQueueSize = 8;
 
+	private Timer timer = new Timer();
+
     /**
      * cTor
      *
@@ -64,7 +77,6 @@ public class RTPSourceStream
      */
     public RTPSourceStream(DataSource datasource)
     {
-        startReq = new Object();
         datasource.setSourceStream(this);
 
         Log.info("Creating RTPSourceStream " + this.hashCode() +", for datasource " + datasource.hashCode() + "(SSRC="+datasource.getSSRC()+")");
@@ -84,7 +96,19 @@ public class RTPSourceStream
      */
     public void add(Buffer buffer)
     {
+        //TODO - drop the buffer if we're not started.
         totalPackets.incrementAndGet();
+
+        if (! started.get())
+        {
+            // TODO - For now we'll still add the packets.
+            Log.warning(String.format("RTPSourceStream %s add() called but not started.", this.hashCode()));
+        }
+
+        if (q.getLatestSeqNo())
+        {
+            // The packet is too late, the ship has sailed.
+        }
 
         if (q.isFull())
         {
@@ -93,6 +117,8 @@ public class RTPSourceStream
             reset();
         }
 
+
+
         Buffer newBuffer = (Buffer)buffer.clone();
         newBuffer.setFlags(newBuffer.getFlags() | Buffer.FLAG_NO_DROP);
 
@@ -100,31 +126,25 @@ public class RTPSourceStream
     }
 
     /**
-     * Stop the stream and put it in the killed state.
+     * Stop the stream.
      */
     public void close()
     {
         Log.info(String.format("close() RTPSourceStream %s", this.hashCode()));
 
-        if (killed)
+        if (timer == null)
         {
             Log.warning(String.format("RTPSourceStream %s already closed", this.hashCode()));
-            return;
         }
-
-        printStats();
-        stop();
-        killed = true;
-
-        synchronized (startReq)
+        else
         {
-            startReq.notifyAll();
+            Log.info(String.format("Ending thread for RTPSourceStream %s",
+                                   this.hashCode()));
+            timer.cancel();
+            timer = null;
+            printStats();
+            stop();
         }
-
-        //TODO: Wake up any threads that are waiting on the JB
-        // Maybe this involves putting a "kill" buffer in the stream?
-
-        thread = null;
     }
 
     /**
@@ -133,17 +153,21 @@ public class RTPSourceStream
     public void connect()
     {
         Log.info(String.format("connect() RTPSourceStream %s", this.hashCode()));
-        killed = false;
         createThread();
     }
 
     private void createThread()
     {
         if (thread != null)
+        {
             return;
-        thread = new RTPMediaThread(this, "RTPStream");
-        thread.useControlPriority();
-        thread.start();
+        }
+
+        // Create a thread that will start now and then run every 20ms.
+        // This thread will queue up additional tasks if execution takes
+        // longer than 20ms. They may be executed in a burst.
+        thread = new TimerTask(){@Override public void run(){packetAvailable();}};
+        timer.scheduleAtFixedRate(thread, 0, 20);
     }
 
     @Override
@@ -151,8 +175,6 @@ public class RTPSourceStream
     {
         return format;
     }
-
-
 
     /**
      * Pops an element off the queue and copies it to <tt>buffer</tt>. The data
@@ -164,24 +186,16 @@ public class RTPSourceStream
     @Override
     public void read(Buffer buffer)
     {
-//        if (q.isEmpty())
-//        {
-//            if (! loggedEmpty)
-//            {
-//                Log.warning(String.format("Read from RTPSourceStream %s when empty", this.hashCode()));
-//                loggedEmpty = true;
-//            }
-//            buffer.setDiscard(true);
-//            return;
-//        }
-//        else
-//        {
-//            loggedEmpty = false;
-//        }
-
-        Buffer bufferFromQueue = lastRead;
-        lastRead = null;
-        buffer.copy(bufferFromQueue);
+        if (q.isEmpty())
+        {
+            Log.warning(String.format("Read from RTPSourceStream %s when empty",
+                        this.hashCode()));
+            buffer.setDiscard(true);
+        }
+        else
+        {
+            buffer.copy(q.get());
+        }
     }
 
     /**
@@ -195,39 +209,44 @@ public class RTPSourceStream
         q.reset();
     }
 
-	@Override
-    public void run() {
-        while (true)
-            try
+    /**
+     * Called every packetization interval.
+     */
+    public void packetAvailable()
+    {
+        // When the stream has just been started, it's in prebuffering mode.
+        // This stops the stream from signalling to the BufferTransferHandler
+        // that there is data available until the jitter buffer is full enough
+        // (at which point we exit prebuffering)
+        if (prebuffering.get())
+        {
+            int size = q.getCurrentSize();
+            if (size >= maxJitterQueueSize/2)
             {
-                synchronized (startReq)
-                {
-                    while ((!started) && !killed)
-                    {
-                        // Block waiting for the stream to be started
-                        startReq.wait();
-                    }
-                }
-
-                if (lastRead == null && !killed)
-                {
-                    lastRead = q.get();
-                }
-
-                if (killed)
-                {
-                    Log.info(String.format("Ending thread for RTPSourceStream %s", this.hashCode()));
-                    break;
-                }
+                // >= is used so that we can wait another packetization
+                // interval before we signal the transfer handler.
+                Log.info(String.format("RTPSourceStream %s has completed prebuffering", this.hashCode()));
+                prebuffering.set(false);
+            }
+            else
+            {
+                Log.comment(String.format("RTPSourceStream %s is prebuffering. Size is %s", this.hashCode(), size));
+            }
+        }
+        else
+        {
+            if (started.get())
+            {
                 if (handler != null)
                 {
                     handler.transferData(this);
                 }
             }
-            catch (InterruptedException interruptedexception)
+            else
             {
-                Log.error("Thread " + interruptedexception.getMessage());
+                //Do nothing - we'll try again next time we're scheduled
             }
+        }
     }
 
     /**
@@ -273,12 +292,8 @@ public class RTPSourceStream
     public void start()
     {
         Log.info(String.format("start() RTPSourceStream %s", this.hashCode()));
-        synchronized (startReq)
-        {
-            started = true;
-            // Wake up the thread.
-            startReq.notifyAll();
-        }
+        started.set(true);
+        prebuffering.set(true);
     }
 
     /**
@@ -296,10 +311,8 @@ public class RTPSourceStream
 
         Log.info(buf.toString());
 
-        synchronized (startReq)
-        {
-            started = false;
-        }
+        started.set(false);
+        prebuffering.set(false);
     }
 
     /**

@@ -114,6 +114,8 @@ public class JitterBufferSimple
     /**
      * Get a buffer from the jitter buffer, blocking until data is available.
      *
+     * It will never return null.
+     *
      * @return the buffer.
      */
     public Buffer get()
@@ -147,5 +149,11 @@ public class JitterBufferSimple
     public void reset()
     {
         q.clear();
+    }
+
+    public boolean getLatestSeqNo()
+    {
+        // TODO Auto-generated method stub
+        return false;
     }
 }
