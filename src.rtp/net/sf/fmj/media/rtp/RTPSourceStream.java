@@ -53,24 +53,25 @@ public class RTPSourceStream
         Log.info(cn+"Number of resets(): " + nbTimesReset);
     }
 
-    private static final int NOT_SPECIFIED = -1;
-    private Format format = null;
-    private BufferTransferHandler handler = null;
-
-    private AtomicBoolean started = new AtomicBoolean();
-    private AtomicBoolean prebuffering = new AtomicBoolean();
-    private TimerTask readThread = null;
-    private TimerTask adjusterThread= null;
-
     /**
      * Sequence number of the last <tt>Buffer</tt> added to the queue.
      */
-    private long lastSeqRecv = NOT_SPECIFIED;
+    private long                  lastSeqRecv        = NOT_SPECIFIED;
+    private static final int      NOT_SPECIFIED      = -1;
 
-	public JitterBufferSimple q;
-	public int maxJitterQueueSize = 8;
+    private Format                format             = null;
+    private BufferTransferHandler handler            = null;
 
-	private Timer timer = new Timer();
+    private AtomicBoolean         started            = new AtomicBoolean();
+    private AtomicBoolean         prebuffering       = new AtomicBoolean();
+
+    private TimerTask             readThread         = null;
+    private TimerTask             adjusterThread     = null;
+    private Timer                 readTimer          = new Timer();
+    private Timer                 adjusterTimer      = new Timer();
+
+    public JitterBufferSimple     q;
+    public int                    maxJitterQueueSize = 8;
 
     /**
      * cTor
@@ -135,7 +136,7 @@ public class RTPSourceStream
     {
         Log.info(String.format("close() RTPSourceStream %s", this.hashCode()));
 
-        if (timer == null)
+        if (readTimer == null)
         {
             Log.warning(String.format("RTPSourceStream %s already closed", this.hashCode()));
         }
@@ -143,8 +144,8 @@ public class RTPSourceStream
         {
             Log.info(String.format("Ending thread for RTPSourceStream %s",
                                    this.hashCode()));
-            timer.cancel();
-            timer = null;
+            readTimer.cancel();
+            readTimer = null;
             printStats();
             stop();
         }
@@ -161,16 +162,27 @@ public class RTPSourceStream
 
     private void createThreads()
     {
-        if (readThread != null)
+        if (readThread == null)
         {
-            return;
+            // Create a thread that will start now and then run every 20ms.
+            // This thread will queue up additional tasks if execution takes
+            // longer than 20ms. They may be executed in a burst.
+            readThread = new TimerTask(){@Override public void run(){packetAvailable();}};
+            readTimer.scheduleAtFixedRate(readThread, 0, 20);
         }
 
-        // Create a thread that will start now and then run every 20ms.
-        // This thread will queue up additional tasks if execution takes
-        // longer than 20ms. They may be executed in a burst.
-        readThread = new TimerTask(){@Override public void run(){packetAvailable();}};
-        timer.scheduleAtFixedRate(readThread, 0, 20);
+        if (adjusterThread == null)
+        {
+            // Create a thread that will start now and then run every 500ms.
+            adjusterThread = new TimerTask(){@Override public void run(){adjustDelay();}};
+            adjusterTimer.scheduleAtFixedRate(readThread, 500, 500);
+        }
+    }
+
+    protected void adjustDelay()
+    {
+        // TODO Auto-generated method stub
+
     }
 
     @Override
