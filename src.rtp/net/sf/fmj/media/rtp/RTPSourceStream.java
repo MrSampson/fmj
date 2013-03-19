@@ -40,6 +40,7 @@ public class RTPSourceStream
     private int nbDiscardedLate   = 0;
     private int nbDiscardedReset  = 0;
     private int nbTimesReset      = 0;
+
     AtomicInteger totalPackets = new AtomicInteger(0);
 
     private void printStats()
@@ -105,10 +106,13 @@ public class RTPSourceStream
             Log.warning(String.format("RTPSourceStream %s add() called but not started.", this.hashCode()));
         }
 
-        if (q.getLatestSeqNo())
+        if (q.theShipHasSailed(buffer))
         {
             // The packet is too late, the ship has sailed.
+             nbDiscardedLate++;
         }
+        else
+        {
 
         if (q.isFull())
         {
@@ -123,6 +127,7 @@ public class RTPSourceStream
         newBuffer.setFlags(newBuffer.getFlags() | Buffer.FLAG_NO_DROP);
 
         q.add(newBuffer);
+        }
     }
 
     /**
