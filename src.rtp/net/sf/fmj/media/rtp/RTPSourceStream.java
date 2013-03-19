@@ -59,7 +59,8 @@ public class RTPSourceStream
 
     private AtomicBoolean started = new AtomicBoolean();
     private AtomicBoolean prebuffering = new AtomicBoolean();
-    private TimerTask thread = null;
+    private TimerTask readThread = null;
+    private TimerTask adjusterThread= null;
 
     /**
      * Sequence number of the last <tt>Buffer</tt> added to the queue.
@@ -83,7 +84,7 @@ public class RTPSourceStream
         Log.info("Creating RTPSourceStream " + this.hashCode() +", for datasource " + datasource.hashCode() + "(SSRC="+datasource.getSSRC()+")");
 
         q = new JitterBufferSimple(maxJitterQueueSize);
-        createThread();
+        createThreads();
     }
 
     /**
@@ -97,7 +98,6 @@ public class RTPSourceStream
      */
     public void add(Buffer buffer)
     {
-        //TODO - drop the buffer if we're not started.
         totalPackets.incrementAndGet();
 
         if (! started.get())
@@ -109,24 +109,22 @@ public class RTPSourceStream
         if (q.theShipHasSailed(buffer))
         {
             // The packet is too late, the ship has sailed.
-             nbDiscardedLate++;
+            nbDiscardedLate++;
         }
         else
         {
 
-        if (q.isFull())
-        {
-            Log.warning(String.format("RTPSourceStream %s buffer is full.", this.hashCode()));
-//            nbDiscardedFull += q.dropOldest();
-            reset();
-        }
+            if (q.isFull())
+            {
+                Log.warning(String.format("RTPSourceStream %s buffer is full.", this.hashCode()));
+                nbDiscardedFull++;
+                q.dropOldest();
+            }
 
+            Buffer newBuffer = (Buffer)buffer.clone();
+            newBuffer.setFlags(newBuffer.getFlags() | Buffer.FLAG_NO_DROP);
 
-
-        Buffer newBuffer = (Buffer)buffer.clone();
-        newBuffer.setFlags(newBuffer.getFlags() | Buffer.FLAG_NO_DROP);
-
-        q.add(newBuffer);
+            q.add(newBuffer);
         }
     }
 
@@ -158,12 +156,12 @@ public class RTPSourceStream
     public void connect()
     {
         Log.info(String.format("connect() RTPSourceStream %s", this.hashCode()));
-        createThread();
+        createThreads();
     }
 
-    private void createThread()
+    private void createThreads()
     {
-        if (thread != null)
+        if (readThread != null)
         {
             return;
         }
@@ -171,8 +169,8 @@ public class RTPSourceStream
         // Create a thread that will start now and then run every 20ms.
         // This thread will queue up additional tasks if execution takes
         // longer than 20ms. They may be executed in a burst.
-        thread = new TimerTask(){@Override public void run(){packetAvailable();}};
-        timer.scheduleAtFixedRate(thread, 0, 20);
+        readThread = new TimerTask(){@Override public void run(){packetAvailable();}};
+        timer.scheduleAtFixedRate(readThread, 0, 20);
     }
 
     @Override
