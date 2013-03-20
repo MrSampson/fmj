@@ -175,7 +175,7 @@ public class RTPSourceStream
         {
             // Create a thread that will start now and then run every 500ms.
             adjusterThread = new TimerTask(){@Override public void run(){adjustDelay();}};
-            adjusterTimer.scheduleAtFixedRate(readThread, 500, 500);
+            adjusterTimer.scheduleAtFixedRate(adjusterThread, 500, 500);
         }
     }
 
