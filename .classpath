@@ -2,21 +2,11 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="src.sunibm.replace"/>
-	<classpathentry kind="src" path="src.capture"/>
 	<classpathentry kind="src" path="src.ejmf"/>
-	<classpathentry kind="src" path="src.gst"/>
-	<classpathentry kind="src" path="src.sip-communicator"/>
-	<classpathentry kind="src" path="src.examples.rtp"/>
-	<classpathentry kind="src" path="src.ffmpeg-java"/>
-	<classpathentry kind="src" path="src.theora-java"/>
-	<classpathentry kind="src" path="src.t4l"/>
-	<classpathentry kind="src" path="src.apps"/>
-	<classpathentry kind="src" path="src.fmjstudio"/>
 	<classpathentry kind="src" path="src.sunibm.base"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="src" path="src.rtp"/>
 	<classpathentry kind="src" path="src.stubs"/>
-	<classpathentry kind="src" path="src.ds"/>
 	<classpathentry kind="src" path="src.utils"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="output" path="build/classes.eclipse"/>
