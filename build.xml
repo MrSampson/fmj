@@ -18,7 +18,6 @@
             <src path="src.stubs"/>
             <src path="src.sunibm.base"/>
             <src path="src.sunibm.replace"/>
-            <src path="src.t4l"/>
             <src path="src.utils"/>
         </javac>
     </target>
