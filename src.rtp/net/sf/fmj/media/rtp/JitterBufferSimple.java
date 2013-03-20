@@ -14,8 +14,21 @@ import net.sf.fmj.media.*;
  */
 public class JitterBufferSimple
 {
+    /**
+     * The underlying datastore for the jitter buffer.
+     *
+     * It allows concurrent access, has blocking semantics and stores it's
+     * objects in a priority order.
+     */
     final private PriorityBlockingQueue<Buffer> q;
-    public int                           maxCapacity;
+
+    /**
+     * The max capacity of the jitter buffer in packets.
+     */
+    public int               maxCapacity;
+    private final AtomicLong lastSeqNoReturned = new AtomicLong(-1);
+    private final AtomicLong lastSeqNoAdded    = new AtomicLong(-1);
+
     /**
      * Creates a new JB
      *
@@ -24,6 +37,8 @@ public class JitterBufferSimple
     public JitterBufferSimple(int maxCapacity)
     {
         this.maxCapacity = maxCapacity;
+
+        //The packets are stored in order of sequence number.
         q = new PriorityBlockingQueue<Buffer>(maxCapacity , new Comparator<Buffer>()
         {
 
@@ -35,6 +50,147 @@ public class JitterBufferSimple
                 return JitterBufferSimple.compareSeqNos(buf1SeqNo, buf2SeqNo);
             }
         });
+    }
+
+    /**
+     * Add a buffer to the JB
+     *
+     * @param buffer The buffer to add.
+     *
+     * TODO - Race in the dupe detection code. But it's best effort so that's fine.
+     */
+    public void add(Buffer buffer)
+    {
+        boolean success = false;
+        long seqNo = buffer.getSequenceNumber();
+
+        if (seqNo == lastSeqNoAdded.get())
+        {
+            Log.warning(String.format("Dropping duplicate packet from jitter buffer with seqNo %s", seqNo));
+        }
+        else
+        {
+            success = q.offer(buffer);
+
+            if (!success)
+            {
+                // TODO While we're using an unbounded queue, it's actually
+                // impossible to hit this.
+                Log.warning("Failed to add a buffer to jitter buffer. This is usually because it is full.");
+            }
+            else
+            {
+                if (seqNo != Buffer.SEQUENCE_UNKNOWN &&
+                        compareSeqNos(seqNo, lastSeqNoAdded.get()) > 0)
+                {
+                    // The seqNo we've just added is later than the last added one
+                    // so update it.
+                    lastSeqNoAdded.set(seqNo);
+                }
+            }
+        }
+    }
+
+    /**
+     * Get a buffer from the jitter buffer, blocking until data is available.
+     *
+     * It will never return null.
+
+     * @return the buffer.
+     */
+    public Buffer get()
+    {
+        Buffer retVal = null;
+
+        while (retVal == null)
+        {
+            try
+            {
+                retVal = q.take();
+            }
+            catch (InterruptedException e)
+            {
+                //No need to do anything, we're in a while loop.
+            }
+        }
+
+        long seqNo = retVal.getSequenceNumber();
+        if (seqNo != Buffer.SEQUENCE_UNKNOWN)
+        {
+          lastSeqNoReturned.set(seqNo);
+        }
+
+        return retVal;
+    }
+
+    /**
+     * Drop the oldest packet in the JB.
+     */
+    public void dropOldest()
+    {
+
+        Buffer buf = q.poll();
+        if (buf != null)
+        {
+            Log.warning(String.format("Dropping duplicate packet from jitter buffer with seqNo %s", buf.getSequenceNumber()));
+        }
+    }
+
+    /**
+     * Removes all packets from the jitter buffer.
+     */
+    public void reset()
+    {
+        //TODO should this also clear all state?
+        q.clear();
+    }
+
+    /**
+     * @return The maximum capacity of the jitter buffer.
+     */
+    public int getMaxCapacity()
+    {
+        return maxCapacity;
+    }
+
+    /**
+     * @return The current number of packets in the jitter buffer.
+     */
+    public int getCurrentSize()
+    {
+        return q.size();
+    }
+
+    /**
+     * @return the last sequence number that the jitter buffer has returned.
+     */
+    public long getLastSeqNoReturned()
+    {
+        return lastSeqNoReturned.get();
+    }
+
+    /**
+     * @return the last sequence number that was added to the jitter buffer.
+     */
+    public long getLastSeqNoAdded()
+    {
+        return lastSeqNoAdded.get();
+    }
+
+    /**
+     * @return True when the JB is full.
+     */
+    public boolean isFull()
+    {
+        return remainingCapacity() == 0;
+    }
+
+    /**
+     * @return True when the JB is empty
+     */
+    public boolean isEmpty()
+    {
+        return q.size() == 0;
     }
 
     /**
@@ -72,118 +228,21 @@ public class JitterBufferSimple
     }
 
     /**
-     * @return True when the JB is full.
+     * @return The number of packets that can be stored in the jitter buffer
+     * before it's full.
      */
-    public boolean isFull()
-    {
-//        return q.remainingCapacity() == 0;
-        return remainingCapacity() == 0;
-    }
-
-    /**
-     * @return True when the JB is empty
-     */
-    public boolean isEmpty()
-    {
-        return q.size() == 0;
-    }
-
-    /**
-     * Drop the oldest packet in the JB.
-     */
-    public void dropOldest()
-    {
-        //TODO log
-        q.poll();
-    }
-
-    /**
-     * Add a buffer to the JB
-     *
-     * @param buffer The buffer to add.
-     *
-     * TODO - Race in the dupe detection code. But it's best effort so that's fine.
-     */
-    public void add(Buffer buffer)
-    {
-        boolean success = false;
-        long seqNo = buffer.getSequenceNumber();
-
-        if (seqNo == lastSeqNoAdded.get())
-        {
-            Log.warning(String.format("Dropping duplicate packet from jitter buffer with seqNo %s", seqNo));
-        }
-        else
-        {
-
-        success = q.offer(buffer);
-
-        if (!success)
-        {
-            Log.warning("Failed to add a buffer to jitter buffer. This is usually because it is full.");
-        }
-        else
-        {
-            if (compareSeqNos(seqNo, lastSeqNoAdded.get()) > 0)
-            {
-                // The seqNo we've just added is later than the last added one
-                // so update it.
-                lastSeqNoAdded.set(seqNo);
-            }
-        }
-        }
-    }
-
     private int remainingCapacity()
     {
      return maxCapacity - q.size();
-//      q.remainingCapacity();
     }
-
-    AtomicLong lastSeqNoReturned = new AtomicLong(-1);
-    AtomicLong lastSeqNoAdded = new AtomicLong(-1);
 
     /**
-     * Get a buffer from the jitter buffer, blocking until data is available.
+     * Checks whether there's any point adding a packet to the jitter buffer.
      *
-     * It will never return null.
-
-     * @return the buffer.
+     * @param buffer The packet to check.
+     * @return True when a more recent packet has already been returned by the
+     * jitter buffer. False otherwise.
      */
-    public Buffer get()
-    {
-        Buffer retVal = null;
-
-        while (retVal == null)
-        {
-            try
-            {
-                retVal = q.take();
-            }
-            catch (InterruptedException e)
-            {
-            }
-        }
-
-        lastSeqNoReturned.set(retVal.getSequenceNumber());
-        return retVal;
-    }
-
-    public int getMaxSize()
-    {
-        return maxCapacity;
-    }
-
-    public int getCurrentSize()
-    {
-        return q.size();
-    }
-
-    public void reset()
-    {
-        q.clear();
-    }
-
     public boolean theShipHasSailed(Buffer buffer)
     {
         if (lastSeqNoReturned.get() == -1)
@@ -205,4 +264,5 @@ public class JitterBufferSimple
         // should just throw it away, so return true.
         return result <= 0;
     }
+
 }

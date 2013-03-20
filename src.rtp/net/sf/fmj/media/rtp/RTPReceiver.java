@@ -20,7 +20,6 @@ public class RTPReceiver extends PacketFilter
     private final SSRCCache cache;
     private final RTPDemultiplexer rtpdemultiplexer;
     private boolean rtcpstarted;
-    private final String content;
     private final SSRCTable probationList;
     private static final int MAX_DROPOUT = 3000;
     private static final int MAX_MISORDER = 100;
@@ -33,7 +32,6 @@ public class RTPReceiver extends PacketFilter
     public RTPReceiver(SSRCCache ssrccache, RTPDemultiplexer rtpdemultiplexer)
     {
         rtcpstarted = false;
-        content = "";
         probationList = new SSRCTable();
         controlstr = "javax.media.rtp.RTPControl";
         errorPayload = -1;
@@ -371,7 +369,6 @@ public class RTPReceiver extends PacketFilter
                     .getStreams();
             ssrcinfo.dsource = datasource;
             ssrcinfo.dstream = (RTPSourceStream) apushbufferstream[0];
-            ssrcinfo.dstream.setContentDescriptor(content);
             ssrcinfo.dstream.setFormat(ssrcinfo.currentformat);
             RTPControlImpl rtpcontrolimpl2 = (RTPControlImpl) ssrcinfo.dsource
                     .getControl(controlstr);

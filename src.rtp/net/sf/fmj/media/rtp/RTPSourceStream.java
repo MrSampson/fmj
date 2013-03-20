@@ -217,7 +217,10 @@ public class RTPSourceStream
                                       this.hashCode(),
                                       delay,
                                       targetDelayInPackets));
-            //TODO - Insert silence
+
+            Buffer discardBuffer = new Buffer();
+            discardBuffer.setDiscard(true);
+            q.add(discardBuffer);
         }
     }
 
@@ -255,16 +258,16 @@ public class RTPSourceStream
         else
         {
             //Get the buffer from the jitter buffer. The buffer can be copied
-            // as there's no point cloning it since we created it in this class.
+            //as there's no point cloning it since we created it in this class.
             Buffer bufferToCopyFrom = q.get();
-
             buffer.copy(bufferToCopyFrom);
 
-            long thisSeqNum =  bufferToCopyFrom.getSequenceNumber(); //Needs to handle loss.
-            long delay = q.lastSeqNoAdded.get() - thisSeqNum;
+            // Update the delay average. The delay is the difference between
+            // this seqNum and the most recently added one to the queue.
+            long thisSeqNum =  bufferToCopyFrom.getSequenceNumber(); //TODO Needs to handle loss.
+            long delay = q.getLastSeqNoAdded() - thisSeqNum;
             delayTracker.updateAverageDelay(delay);
         }
-
     }
 
     /**
