@@ -58,6 +58,7 @@ public class RTPSourceStream
      */
     private long                  lastSeqRecv        = NOT_SPECIFIED;
     private static final int      NOT_SPECIFIED      = -1;
+    private static final int requiredDelta = 1;
 
     private Format                format             = null;
     private BufferTransferHandler handler            = null;
@@ -72,6 +73,8 @@ public class RTPSourceStream
 
     public JitterBufferSimple     q;
     public int                    maxJitterQueueSize = 8;
+    private int targetDelayInPackets = maxJitterQueueSize / 2;
+    private AverageDelayTracker delayTracker = new AverageDelayTracker();
 
     /**
      * cTor
@@ -131,6 +134,8 @@ public class RTPSourceStream
 
     /**
      * Stop the stream.
+     *
+     *TODO should be synchronized?
      */
     public void close()
     {
@@ -146,6 +151,10 @@ public class RTPSourceStream
                                    this.hashCode()));
             readTimer.cancel();
             readTimer = null;
+
+            adjusterTimer.cancel();
+            adjusterTimer = null;
+
             printStats();
             stop();
         }
@@ -179,10 +188,37 @@ public class RTPSourceStream
         }
     }
 
+    /**
+     * If target delay differs from the average by a big enough delta then
+     * add/drop a packet.
+     */
     protected void adjustDelay()
     {
-        // TODO Auto-generated method stub
+        double delay = delayTracker.getAverageDelayInPacketsAndReset();
 
+        if (delay + requiredDelta > targetDelayInPackets)
+        {
+            //There's on average too much delay so drop a packet.
+            Log.warning(String.format("RTPSourceStream %s average delay (%s) " +
+            		                  "is greater than target (%s) so " +
+            		                  "dropping packet",
+                                      this.hashCode(),
+                                      delay,
+                                      targetDelayInPackets));
+            q.dropOldest();
+            nbDiscardedShrink++;
+        }
+        else if (delay - requiredDelta < targetDelayInPackets)
+        {
+            //There's not enough delay on average insert a packet.
+            Log.warning(String.format("RTPSourceStream %s average delay (%s) " +
+                                      "is lower than target (%s) so " +
+                                      "inserting packet",
+                                      this.hashCode(),
+                                      delay,
+                                      targetDelayInPackets));
+            //TODO - Insert silence
+        }
     }
 
     @Override
@@ -201,16 +237,34 @@ public class RTPSourceStream
     @Override
     public void read(Buffer buffer)
     {
+        //Every time a packet is clocked out of the JB, a rolling average of the
+        // difference between the seqno of the packet being read (or if the
+        // packet is missing, the seqno of the packet that should be available)
+        // and the last sequence number added to the jitter buffer is updated.
+        // This approach is resilient to packet loss.
+
+
         if (q.isEmpty())
         {
             Log.warning(String.format("Read from RTPSourceStream %s when empty",
                         this.hashCode()));
             buffer.setDiscard(true);
+
+            delayTracker.updateAverageDelayWithEmptyBuffer();
         }
         else
         {
-            buffer.copy(q.get());
+            //Get the buffer from the jitter buffer. The buffer can be copied
+            // as there's no point cloning it since we created it in this class.
+            Buffer bufferToCopyFrom = q.get();
+
+            buffer.copy(bufferToCopyFrom);
+
+            long thisSeqNum =  bufferToCopyFrom.getSequenceNumber(); //Needs to handle loss.
+            long delay = q.lastSeqNoAdded.get() - thisSeqNum;
+            delayTracker.updateAverageDelay(delay);
         }
+
     }
 
     /**

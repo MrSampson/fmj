@@ -93,6 +93,7 @@ public class JitterBufferSimple
      */
     public void dropOldest()
     {
+        //TODO log
         q.poll();
     }
 
@@ -100,15 +101,36 @@ public class JitterBufferSimple
      * Add a buffer to the JB
      *
      * @param buffer The buffer to add.
+     *
+     * TODO - Race in the dupe detection code. But it's best effort so that's fine.
      */
     public void add(Buffer buffer)
     {
         boolean success = false;
+        long seqNo = buffer.getSequenceNumber();
+
+        if (seqNo == lastSeqNoAdded.get())
+        {
+            Log.warning(String.format("Dropping duplicate packet from jitter buffer with seqNo %s", seqNo));
+        }
+        else
+        {
+
         success = q.offer(buffer);
 
         if (!success)
         {
             Log.warning("Failed to add a buffer to jitter buffer. This is usually because it is full.");
+        }
+        else
+        {
+            if (compareSeqNos(seqNo, lastSeqNoAdded.get()) > 0)
+            {
+                // The seqNo we've just added is later than the last added one
+                // so update it.
+                lastSeqNoAdded.set(seqNo);
+            }
+        }
         }
     }
 
@@ -118,7 +140,8 @@ public class JitterBufferSimple
 //      q.remainingCapacity();
     }
 
-    AtomicLong lastSeqNo = new AtomicLong(-1);
+    AtomicLong lastSeqNoReturned = new AtomicLong(-1);
+    AtomicLong lastSeqNoAdded = new AtomicLong(-1);
 
     /**
      * Get a buffer from the jitter buffer, blocking until data is available.
@@ -142,7 +165,7 @@ public class JitterBufferSimple
             }
         }
 
-        lastSeqNo.set(retVal.getSequenceNumber());
+        lastSeqNoReturned.set(retVal.getSequenceNumber());
         return retVal;
     }
 
@@ -163,15 +186,16 @@ public class JitterBufferSimple
 
     public boolean theShipHasSailed(Buffer buffer)
     {
-        if (lastSeqNo.get() == -1)
+        if (lastSeqNoReturned.get() == -1)
         {
             return false;
         }
 
         long incomingSeqNo = buffer.getSequenceNumber();
-        long latestAcceptableSeqNo = lastSeqNo.get();
+        long latestAcceptableSeqNo = lastSeqNoReturned.get();
 
-        int result = JitterBufferSimple.compareSeqNos(incomingSeqNo, latestAcceptableSeqNo);
+        int result = compareSeqNos(incomingSeqNo, latestAcceptableSeqNo);
+
         // A result of 0 indicates the numbers are the same - i.e. a dupe so
         // return true.
         // A positive number indicates that the incomingSeqNo was larger (i.e.
@@ -179,7 +203,6 @@ public class JitterBufferSimple
         // return false.
         // A negative number indicates the incomingSeqNo was smaller so we
         // should just throw it away, so return true.
-
         return result <= 0;
     }
 }
