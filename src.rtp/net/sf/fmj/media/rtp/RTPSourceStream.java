@@ -26,15 +26,15 @@ import net.sf.fmj.media.protocol.rtp.DataSource;
  * </ul>
  * <li>Connected - The thread is started</li>
  * </ul>
- *
  * <p>
- *
- * When the RTPSourceStream isn't started, packets can still TODO
+ * When the RTPSourceStream isn't started, packets can still be added to it.
  */
 public class RTPSourceStream
     extends BasicSourceStream
     implements PushBufferStream, PacketQueueControl
 {
+    private static final int ADJUSTER_THREAD_INTERVAL = 1000;
+    private static final int PACKETIZATION_INTERVAL = 20;
     private int nbDiscardedFull   = 0;
     private int nbDiscardedShrink = 0;
     private int nbDiscardedLate   = 0;
@@ -58,7 +58,7 @@ public class RTPSourceStream
      */
     private long                  lastSeqRecv        = NOT_SPECIFIED;
     private static final int      NOT_SPECIFIED      = -1;
-    private static final int requiredDelta = 1;
+    private static final int requiredDelta = 2;
 
     private Format                format             = null;
     private BufferTransferHandler handler            = null;
@@ -113,6 +113,8 @@ public class RTPSourceStream
         if (q.theShipHasSailed(buffer))
         {
             // The packet is too late, the ship has sailed.
+            // Dn't add the packet to the queue. This is equivalent to a
+            // packet dropped by the network.
             nbDiscardedLate++;
         }
         else
@@ -177,14 +179,15 @@ public class RTPSourceStream
             // This thread will queue up additional tasks if execution takes
             // longer than 20ms. They may be executed in a burst.
             readThread = new TimerTask(){@Override public void run(){packetAvailable();}};
-            readTimer.scheduleAtFixedRate(readThread, 0, 20);
+            readTimer.scheduleAtFixedRate(readThread, 0, PACKETIZATION_INTERVAL);
         }
 
         if (adjusterThread == null)
         {
-            // Create a thread that will start now and then run every 500ms.
+            // Create a thread that will run every 500ms. Delay the start
+            // since we don't want to adjust till we have some data.
             adjusterThread = new TimerTask(){@Override public void run(){adjustDelay();}};
-            adjusterTimer.scheduleAtFixedRate(adjusterThread, 500, 500);
+            adjusterTimer.scheduleAtFixedRate(adjusterThread, ADJUSTER_THREAD_INTERVAL, ADJUSTER_THREAD_INTERVAL);
         }
     }
 
@@ -196,7 +199,7 @@ public class RTPSourceStream
     {
         double delay = delayTracker.getAverageDelayInPacketsAndReset();
 
-        if (delay + requiredDelta > targetDelayInPackets)
+        if (delay > targetDelayInPackets + requiredDelta)
         {
             //There's on average too much delay so drop a packet.
             Log.warning(String.format("RTPSourceStream %s average delay (%s) " +
@@ -208,7 +211,7 @@ public class RTPSourceStream
             q.dropOldest();
             nbDiscardedShrink++;
         }
-        else if (delay - requiredDelta < targetDelayInPackets)
+        else if (delay < targetDelayInPackets - requiredDelta)
         {
             //There's not enough delay on average insert a packet.
             Log.warning(String.format("RTPSourceStream %s average delay (%s) " +
@@ -218,9 +221,9 @@ public class RTPSourceStream
                                       delay,
                                       targetDelayInPackets));
 
-            Buffer discardBuffer = new Buffer();
-            discardBuffer.setDiscard(true);
-            q.add(discardBuffer);
+            Buffer silenceBuffer = new Buffer();
+            silenceBuffer.setFlags(Buffer.FLAG_SILENCE | Buffer.FLAG_NO_FEC);
+            q.add(silenceBuffer);
         }
     }
 
@@ -245,13 +248,11 @@ public class RTPSourceStream
         // packet is missing, the seqno of the packet that should be available)
         // and the last sequence number added to the jitter buffer is updated.
         // This approach is resilient to packet loss.
-
-
         if (q.isEmpty())
         {
             Log.warning(String.format("Read from RTPSourceStream %s when empty",
                         this.hashCode()));
-            buffer.setDiscard(true);
+            buffer.setFlags(Buffer.FLAG_SILENCE | Buffer.FLAG_NO_FEC);
 
             delayTracker.updateAverageDelayWithEmptyBuffer();
         }
@@ -265,8 +266,12 @@ public class RTPSourceStream
             // Update the delay average. The delay is the difference between
             // this seqNum and the most recently added one to the queue.
             long thisSeqNum =  bufferToCopyFrom.getSequenceNumber(); //TODO Needs to handle loss.
-            long delay = q.getLastSeqNoAdded() - thisSeqNum;
-            delayTracker.updateAverageDelay(delay);
+
+            if (thisSeqNum != Buffer.SEQUENCE_UNKNOWN)
+            {
+                long delay = q.getLastSeqNoAdded() - thisSeqNum;
+                delayTracker.updateAverageDelay(delay);
+            }
         }
     }
 

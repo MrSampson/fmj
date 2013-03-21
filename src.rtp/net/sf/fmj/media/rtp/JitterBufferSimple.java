@@ -128,11 +128,20 @@ public class JitterBufferSimple
      */
     public void dropOldest()
     {
-
+        //Remove the oldest element from the queue.
         Buffer buf = q.poll();
         if (buf != null)
         {
-            Log.warning(String.format("Dropping duplicate packet from jitter buffer with seqNo %s", buf.getSequenceNumber()));
+            Log.warning(String.format("Dropped oldest packet in jitter buffer with seqNo %s", buf.getSequenceNumber()));
+        }
+
+        //And update the next oldest element to say that it shouldn't get FECed
+        buf = q.peek();
+
+        if (buf != null)
+        {
+            buf.setFlags(buf.getFlags() | Buffer.FLAG_NO_FEC);
+            Log.warning(String.format("Setting NO_FEC on packet in jitter buffer with seqNo %s", buf.getSequenceNumber()));
         }
     }
 
