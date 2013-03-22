@@ -33,25 +33,18 @@ public class RTPSourceStream
     extends BasicSourceStream
     implements PushBufferStream, PacketQueueControl
 {
+    // Constants
     private static final int ADJUSTER_THREAD_INTERVAL = 1000;
-    private static final int PACKETIZATION_INTERVAL = 20;
+    private static final int PACKETIZATION_INTERVAL   = 20;
+
     private int nbDiscardedFull   = 0;
     private int nbDiscardedShrink = 0;
     private int nbDiscardedLate   = 0;
     private int nbDiscardedReset  = 0;
     private int nbTimesReset      = 0;
+    private int nbSilenceInserted = 0;
 
     AtomicInteger totalPackets = new AtomicInteger(0);
-
-    private void printStats()
-    {
-        String cn = this.getClass().getCanonicalName()+" ";
-        Log.info(cn+"Packets dropped because full: " + nbDiscardedFull);
-        Log.info(cn+"Packets dropped while shrinking: " + nbDiscardedShrink);
-        Log.info(cn+"Packets dropped because they were late: " + nbDiscardedLate);
-        Log.info(cn+"Packets dropped in reset(): " + nbDiscardedReset);
-        Log.info(cn+"Number of resets(): " + nbTimesReset);
-    }
 
     /**
      * Sequence number of the last <tt>Buffer</tt> added to the queue.
@@ -72,7 +65,7 @@ public class RTPSourceStream
     private Timer                 adjusterTimer      = new Timer();
 
     public JitterBufferSimple     q;
-    public int                    maxJitterQueueSize = 8;
+    public int                    maxJitterQueueSize = 10;
     private int targetDelayInPackets = maxJitterQueueSize / 2;
     private AverageDelayTracker delayTracker = new AverageDelayTracker();
 
@@ -224,6 +217,7 @@ public class RTPSourceStream
             Buffer silenceBuffer = new Buffer();
             silenceBuffer.setFlags(Buffer.FLAG_SILENCE | Buffer.FLAG_NO_FEC);
             q.add(silenceBuffer);
+            nbSilenceInserted++;
         }
     }
 
@@ -232,6 +226,12 @@ public class RTPSourceStream
     {
         return format;
     }
+
+    boolean forceSilenceEnable = false;
+
+    int forceSilencePackets = 5; //Silence to insert
+    int forceSilenceGap = 45; //Gap between inserting silence
+    long forceSilenceCounter = -forceSilenceGap; //Set to Long.MIN_VALUE to disable...
 
     /**
      * Pops an element off the queue and copies it to <tt>buffer</tt>. The data
@@ -243,6 +243,17 @@ public class RTPSourceStream
     @Override
     public void read(Buffer buffer)
     {
+        forceSilenceCounter++;
+        if (forceSilenceCounter >= forceSilencePackets){forceSilenceCounter = -forceSilenceGap;}
+
+        if (forceSilenceEnable && forceSilenceCounter > 0)
+        {
+            buffer.setFlags(Buffer.FLAG_SILENCE | Buffer.FLAG_NO_FEC);
+            nbSilenceInserted++;
+            updateDelayAverage(q.get());
+        }
+        else
+        {
         //Every time a packet is clocked out of the JB, a rolling average of the
         // difference between the seqno of the packet being read (or if the
         // packet is missing, the seqno of the packet that should be available)
@@ -253,6 +264,7 @@ public class RTPSourceStream
             Log.warning(String.format("Read from RTPSourceStream %s when empty",
                         this.hashCode()));
             buffer.setFlags(Buffer.FLAG_SILENCE | Buffer.FLAG_NO_FEC);
+            nbSilenceInserted++;
 
             delayTracker.updateAverageDelayWithEmptyBuffer();
         }
@@ -263,15 +275,21 @@ public class RTPSourceStream
             Buffer bufferToCopyFrom = q.get();
             buffer.copy(bufferToCopyFrom);
 
-            // Update the delay average. The delay is the difference between
-            // this seqNum and the most recently added one to the queue.
-            long thisSeqNum =  bufferToCopyFrom.getSequenceNumber(); //TODO Needs to handle loss.
+            updateDelayAverage(bufferToCopyFrom);
+        }
+        }
+    }
 
-            if (thisSeqNum != Buffer.SEQUENCE_UNKNOWN)
-            {
-                long delay = q.getLastSeqNoAdded() - thisSeqNum;
-                delayTracker.updateAverageDelay(delay);
-            }
+    private void updateDelayAverage(Buffer bufferToCopyFrom)
+    {
+        // Update the delay average. The delay is the difference between
+        // this seqNum and the most recently added one to the queue.
+        long thisSeqNum =  bufferToCopyFrom.getSequenceNumber(); //TODO Needs to handle loss.
+
+        if (thisSeqNum != Buffer.SEQUENCE_UNKNOWN && q.getLastSeqNoAdded() != Buffer.SEQUENCE_UNKNOWN)
+        {
+            long delay = q.getLastSeqNoAdded() - thisSeqNum;
+            delayTracker.updateAverageDelay(delay);
         }
     }
 
@@ -515,6 +533,15 @@ public class RTPSourceStream
      * {@inheritDoc}
      */
     @Override
+    public int getSilenceInserted()
+    {
+        return nbSilenceInserted;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public boolean isAdaptiveBufferEnabled()
     {
         return false;
@@ -527,5 +554,15 @@ public class RTPSourceStream
     public int getCurrentPacketCount()
     {
         return q.getCurrentSize();
+    }
+
+    private void printStats()
+    {
+        String cn = this.getClass().getCanonicalName()+" ";
+        Log.info(cn+"Packets dropped because full: " + nbDiscardedFull);
+        Log.info(cn+"Packets dropped while shrinking: " + nbDiscardedShrink);
+        Log.info(cn+"Packets dropped because they were late: " + nbDiscardedLate);
+        Log.info(cn+"Packets dropped in reset(): " + nbDiscardedReset);
+        Log.info(cn+"Number of resets(): " + nbTimesReset);
     }
 }

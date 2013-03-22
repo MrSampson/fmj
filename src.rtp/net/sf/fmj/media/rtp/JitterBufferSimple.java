@@ -26,8 +26,8 @@ public class JitterBufferSimple
      * The max capacity of the jitter buffer in packets.
      */
     public int               maxCapacity;
-    private final AtomicLong lastSeqNoReturned = new AtomicLong(-1);
-    private final AtomicLong lastSeqNoAdded    = new AtomicLong(-1);
+    private final AtomicLong lastSeqNoReturned = new AtomicLong(Buffer.SEQUENCE_UNKNOWN);
+    private final AtomicLong lastSeqNoAdded    = new AtomicLong(Buffer.SEQUENCE_UNKNOWN);
 
     /**
      * Creates a new JB
@@ -80,7 +80,11 @@ public class JitterBufferSimple
             }
             else
             {
-                if (seqNo != Buffer.SEQUENCE_UNKNOWN &&
+                if (lastSeqNoAdded.get() == Buffer.SEQUENCE_UNKNOWN)
+                {
+                    lastSeqNoAdded.set(seqNo);
+                }
+                else if (seqNo != Buffer.SEQUENCE_UNKNOWN &&
                         compareSeqNos(seqNo, lastSeqNoAdded.get()) > 0)
                 {
                     // The seqNo we've just added is later than the last added one

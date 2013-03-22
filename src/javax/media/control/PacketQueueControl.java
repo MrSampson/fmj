@@ -82,4 +82,6 @@ public interface PacketQueueControl extends Control
      * Returns the number of elements currently in the queue
      */
     public int getCurrentPacketCount();
+
+    int getSilenceInserted();
 }
