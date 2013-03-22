@@ -8,16 +8,17 @@
     
 	<target name="build-jitsi" description="compile java source for jitsi">
         <mkdir dir="${javac.out}"/>
-        <javac debug="true" optimize="true" destdir="${javac.out}">
+	<javac debug="true" optimize="true" classpath="lib/jchart2d-3.2.2.jar" destdir="${javac.out}">
         	<exclude name="**/RTPSourceStreamTest.java"/>
         	<exclude name="**/PlayGSM.java"/>
             <src path="${src}"/>
             <src path="src.rtp"/>
-        	<src path="src.ejmf"/>
+            <src path="src.ejmf"/>
             <src path="src.stubs"/>
             <src path="src.sunibm.base"/>
             <src path="src.sunibm.replace"/>
             <src path="src.utils"/>
+            <src path=""/>
         </javac>
     </target>
 
