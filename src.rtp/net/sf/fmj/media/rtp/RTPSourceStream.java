@@ -91,33 +91,34 @@ public class RTPSourceStream
 
     public static Chart2D chart = null;
     public static int datapointsToKeep = 400;
-    private ITrace2D intrace = null;
-    private ITrace2D outtrace = null;
+//    private ITrace2D intrace = null;
+//    private ITrace2D outtrace = null;
     private ITrace2D sizetrace = null;
-    private long lastArrivalTimeNanos = System.nanoTime();
-    private long lastDepartureTimeNanos = System.nanoTime();
+
+//    private long lastArrivalTimeNanos = System.nanoTime();
+//    private long lastDepartureTimeNanos = System.nanoTime();
 
     private boolean shouldChart()
     {
-    	if (intrace != null)
+    	if (sizetrace != null)
     	{
     		return true;
     	}
 
     	if (chart != null)
     	{
-    		intrace = new Trace2DLtd(datapointsToKeep, String.valueOf(datasource.getSSRC() + " IN Delta (ms)"));
-    		intrace.setColor(Color.red);
-
-    		outtrace = new Trace2DLtd(datapointsToKeep, String.valueOf(datasource.getSSRC() + " OUT Delta (ms)"));
-    		outtrace.setColor(Color.green);
+//    		intrace = new Trace2DLtd(datapointsToKeep, String.valueOf(datasource.getSSRC() + " IN Delta (ms)"));
+//    		intrace.setColor(Color.red);
+//
+//    		outtrace = new Trace2DLtd(datapointsToKeep, String.valueOf(datasource.getSSRC() + " OUT Delta (ms)"));
+//    		outtrace.setColor(Color.green);
 
     		sizetrace = new Trace2DLtd(datapointsToKeep, String.valueOf(datasource.getSSRC() + " Size"));
     		sizetrace.setColor(Color.black);
 
-    		chart.addTrace(intrace);
+//    		chart.addTrace(intrace);
 //    		chart.addTrace(outtrace);
-//    		chart.addTrace(sizetrace);
+    		chart.addTrace(sizetrace);
 
     		return true;
     	}
@@ -136,13 +137,13 @@ public class RTPSourceStream
      */
     public void add(Buffer buffer)
     {
-        if (shouldChart())
-        {
-            long timeNow = System.nanoTime();
-//          outtrace.addPoint(timeNow, (timeNow - lastDepartureTimeNanos)/1000000);
+//        if (shouldChart())
+//        {
+//            long timeNow = System.nanoTime();
+////          outtrace.addPoint(timeNow, (timeNow - lastDepartureTimeNanos)/1000000);
 //          sizetrace.addPoint(timeNow,q.getCurrentSize());
-            lastDepartureTimeNanos = timeNow;
-        }
+//            lastDepartureTimeNanos = timeNow;
+//        }
 
         totalPackets.incrementAndGet();
 
@@ -292,6 +293,11 @@ public class RTPSourceStream
     @Override
     public void read(Buffer buffer)
     {
+        if (shouldChart())
+        {
+            sizetrace.addPoint(System.nanoTime(),q.getCurrentSize());
+        }
+
         forceSilenceCounter++;
         if (forceSilenceCounter >= forceSilencePackets){forceSilenceCounter = -forceSilenceGap;}
 
