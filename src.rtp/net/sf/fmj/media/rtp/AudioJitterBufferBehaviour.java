@@ -180,6 +180,12 @@ public class AudioJitterBufferBehaviour implements JitterBufferBehaviour
                 updateDelayAverage(bufferToCopyFrom);
             }
         }
+
+        if (JitterBufferTester.pleaseReset)
+        {
+            JitterBufferTester.pleaseReset = false;
+            q.reset();
+        }
     }
     @Override
     public void start()

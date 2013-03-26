@@ -6,6 +6,7 @@ import javax.media.*;
 
 public class JitterBufferTester
 {
+    public static boolean pleaseReset = false;
     boolean forceSilenceEnable = false;
 
     int forceSilencePackets = 5; //Silence to insert
