@@ -40,6 +40,15 @@ public class RTPSourceStream
     private static final int ADJUSTER_THREAD_INTERVAL = 1000;
     private static final int PACKETIZATION_INTERVAL   = 20;
 
+
+    //-------------------------------------------------------------------------
+    // Video stuff
+    //-------------------------------------------------------------------------
+    int minVideoPackets = 16;
+    int maxVideoPackets = 256;
+
+
+
     private int nbDiscardedFull   = 0;
     private int nbDiscardedShrink = 0;
     private int nbDiscardedLate   = 0;
@@ -94,6 +103,7 @@ public class RTPSourceStream
 //    private ITrace2D intrace = null;
 //    private ITrace2D outtrace = null;
     private ITrace2D sizetrace = null;
+    private Thread videoThread;
 
 //    private long lastArrivalTimeNanos = System.nanoTime();
 //    private long lastDepartureTimeNanos = System.nanoTime();
@@ -168,6 +178,15 @@ public class RTPSourceStream
                 Log.warning(String.format("RTPSourceStream %s buffer is full.", this.hashCode()));
                 nbDiscardedFull++;
                 q.dropOldest();
+
+                if (format instanceof VideoFormat)
+                {
+                    while(q.getCurrentSize() > minVideoPackets)
+                    {
+                        nbDiscardedFull++;
+                        q.dropOldest();
+                    }
+                }
             }
 
             Buffer newBuffer = (Buffer)buffer.clone();
@@ -186,6 +205,8 @@ public class RTPSourceStream
     {
         Log.info(String.format("close() RTPSourceStream %s", this.hashCode()));
 
+        if (format instanceof AudioFormat)
+        {
         if (readTimer == null)
         {
             Log.warning(String.format("RTPSourceStream %s already closed", this.hashCode()));
@@ -203,6 +224,12 @@ public class RTPSourceStream
             printStats();
             stop();
         }
+        }
+        else
+        {
+            printStats();
+            stop();
+        }
     }
 
     /**
@@ -216,6 +243,8 @@ public class RTPSourceStream
 
     private void createThreads()
     {
+        if (format instanceof AudioFormat)
+        {
         if (readThread == null)
         {
             // Create a thread that will start now and then run every 20ms.
@@ -232,9 +261,37 @@ public class RTPSourceStream
             adjusterThread = new TimerTask(){@Override public void run(){adjustDelay();}};
             adjusterTimer.scheduleAtFixedRate(adjusterThread, ADJUSTER_THREAD_INTERVAL, ADJUSTER_THREAD_INTERVAL);
         }
+        }
+        else
+        {
+            //TODO create video thread
+            videoThread = new Thread()
+            {
+                @Override
+                public void run()
+                {
+                    while (true)
+                    {
+                        transferVideoData();
+                        try
+                        {
+                            Thread.sleep(1);
+                        }
+                        catch (InterruptedException e)
+                        {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            };
+            videoThread.start();
+        }
     }
 
     /**
+     * AUDIO ONLY
+     *
      * If target delay differs from the average by a big enough delta then
      * add/drop a packet.
      */
@@ -298,6 +355,8 @@ public class RTPSourceStream
             sizetrace.addPoint(System.nanoTime(),q.getCurrentSize());
         }
 
+        if (format instanceof AudioFormat)
+        {
         forceSilenceCounter++;
         if (forceSilenceCounter >= forceSilencePackets){forceSilenceCounter = -forceSilenceGap;}
 
@@ -333,8 +392,20 @@ public class RTPSourceStream
             updateDelayAverage(bufferToCopyFrom);
         }
         }
+        }
+        else
+        {
+            //-----------------------------------------------------------------
+            // VIDEO
+            //-----------------------------------------------------------------
+            Buffer bufferToCopyFrom = q.get();
+            buffer.copy(bufferToCopyFrom);
+        }
     }
 
+    /*
+     * AUDIO ONLY
+     */
     private void updateDelayAverage(Buffer bufferToCopyFrom)
     {
         // Update the delay average. The delay is the difference between
@@ -360,6 +431,8 @@ public class RTPSourceStream
     }
 
     /**
+     * AUDIO ONLY
+     *
      * Called every packetization interval.
      */
     public void packetAvailable()
@@ -399,6 +472,15 @@ public class RTPSourceStream
         }
     }
 
+    //TODO - call this in a tight loop....
+    public void transferVideoData()
+    {
+        if (started.get() && q.getCurrentSize() > minVideoPackets && handler!=null)
+        {
+                handler.transferData(this);
+        }
+    }
+
     /**
      * @param flag
      */
@@ -427,6 +509,9 @@ public class RTPSourceStream
             Log.info(String.format("RTPSourceStream %s set format to video. Adjusting jitter buffer length", this.hashCode()));
             maxJitterQueueSize = 128;
             q.maxCapacity = 128;
+
+            //TODO - anything else to do here?
+             createThreads();
         }
     }
 
