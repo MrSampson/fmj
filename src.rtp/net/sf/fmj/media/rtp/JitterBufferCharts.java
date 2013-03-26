@@ -60,6 +60,11 @@ public class JitterBufferCharts
         return false;
     }
 
+    public void updateSize(int size)
+    {
+         sizetrace.addPoint(System.nanoTime(), size);
+    }
+
     //  if (shouldChart())
     //  {
     //      long timeNow = System.nanoTime();

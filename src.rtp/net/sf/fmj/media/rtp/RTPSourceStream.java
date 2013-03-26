@@ -123,8 +123,7 @@ public class RTPSourceStream
     {
         if (charts.shouldChart())
         {
-            //            sizetrace.addPoint(System.nanoTime(),q.getCurrentSize());
-            //            TODO
+            charts.updateSize(q.getCurrentSize());
         }
 
         behaviour.read(buffer);
