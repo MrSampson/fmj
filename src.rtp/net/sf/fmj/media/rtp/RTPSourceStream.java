@@ -6,6 +6,7 @@ import info.monitorenter.gui.chart.traces.*;
 import java.awt.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
+import java.util.concurrent.locks.*;
 
 import javax.media.*;
 import javax.media.control.*;
@@ -136,6 +137,11 @@ public class RTPSourceStream
     	return false;
     }
 
+    private final Lock videoLock = new ReentrantLock();
+    private final Condition videoCondition = videoLock.newCondition();
+    private volatile boolean videoDataAvailable = false;
+
+
     /**
      * Adds <tt>buffer</tt> to the queue.
      *
@@ -147,6 +153,21 @@ public class RTPSourceStream
      */
     public void add(Buffer buffer)
     {
+        if (format instanceof VideoFormat)
+        {
+videoLock.lock();
+try
+{
+    videoDataAvailable = true;
+    videoCondition.signalAll();
+}
+finally
+{
+    videoLock.unlock();
+}
+        }
+
+
 //        if (shouldChart())
 //        {
 //            long timeNow = System.nanoTime();
@@ -245,26 +266,46 @@ public class RTPSourceStream
     {
         if (format instanceof AudioFormat)
         {
-        if (readThread == null)
-        {
-            // Create a thread that will start now and then run every 20ms.
-            // This thread will queue up additional tasks if execution takes
-            // longer than 20ms. They may be executed in a burst.
-            readThread = new TimerTask(){@Override public void run(){packetAvailable();}};
-            readTimer.scheduleAtFixedRate(readThread, 0, PACKETIZATION_INTERVAL);
-        }
+            if (readThread == null)
+            {
+                // Create a thread that will start now and then run every 20ms.
+                // This thread will queue up additional tasks if execution takes
+                // longer than 20ms. They may be executed in a burst.
+                readThread = new TimerTask()
+                {
+                    @Override
+                    public void run()
+                    {
+                        packetAvailable();
+                    }
+                };
+                readTimer.scheduleAtFixedRate(readThread,
+                                              0,
+                                              PACKETIZATION_INTERVAL);
+            }
 
-        if (adjusterThread == null)
-        {
-            // Create a thread that will run every 500ms. Delay the start
-            // since we don't want to adjust till we have some data.
-            adjusterThread = new TimerTask(){@Override public void run(){adjustDelay();}};
-            adjusterTimer.scheduleAtFixedRate(adjusterThread, ADJUSTER_THREAD_INTERVAL, ADJUSTER_THREAD_INTERVAL);
+            if (adjusterThread == null)
+            {
+                // Create a thread that will run every 500ms. Delay the start
+                // since we don't want to adjust till we have some data.
+                adjusterThread = new TimerTask()
+                {
+                    @Override
+                    public void run()
+                    {
+                        adjustDelay();
+                    }
+                };
+                adjusterTimer.scheduleAtFixedRate(adjusterThread,
+                                                  ADJUSTER_THREAD_INTERVAL,
+                                                  ADJUSTER_THREAD_INTERVAL);
+            }
         }
-        }
-        else
+        else if (format instanceof VideoFormat)
         {
-            //TODO create video thread
+            if (videoThread == null)
+            {
+            //TODO create actual media thread.
             videoThread = new Thread()
             {
                 @Override
@@ -272,20 +313,26 @@ public class RTPSourceStream
                 {
                     while (true)
                     {
-                        transferVideoData();
+                        videoLock.lock();
+
                         try
                         {
-                            Thread.sleep(1);
+                            while (! videoDataAvailable)
+                            {
+                                videoCondition.awaitUninterruptibly();
+                            }
                         }
-                        catch (InterruptedException e)
+                        finally
                         {
-                            // TODO Auto-generated catch block
-                            e.printStackTrace();
+                            videoLock.unlock();
                         }
+
+                        transferVideoData();
                     }
                 }
             };
             videoThread.start();
+            }
         }
     }
 
@@ -393,7 +440,7 @@ public class RTPSourceStream
         }
         }
         }
-        else
+        else if (format instanceof VideoFormat)
         {
             //-----------------------------------------------------------------
             // VIDEO
