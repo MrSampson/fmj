@@ -71,7 +71,7 @@ public class RTPSourceStream
      */
     public void add(Buffer buffer)
     {
-        behaviour.preAdd(buffer);
+        behaviour.preAdd();
         stats.incrementTotalPackets();
 
         if (! started.get())

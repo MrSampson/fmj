@@ -7,17 +7,10 @@ import javax.media.protocol.*;
 
 public interface JitterBufferBehaviour
 {
-
-    void preAdd(Buffer xiBuffer);
-
+    void preAdd();
     void handleFull();
-
-    void read(Buffer xiBuffer);
-
+    void read(Buffer buffer);
     void start();
-
     void stop();
-
     void setTransferHandler(BufferTransferHandler xiBuffertransferhandler);
-
 }

@@ -18,7 +18,7 @@ public class SimpleJitterBufferBehaviour implements JitterBufferBehaviour
     }
 
     @Override
-    public void preAdd(Buffer buffer)
+    public void preAdd()
     {
         //Do Nothing
     }

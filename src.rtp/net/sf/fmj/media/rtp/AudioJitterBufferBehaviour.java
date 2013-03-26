@@ -225,7 +225,7 @@ if (tester.silenceInserted(buffer))
     }
 
     @Override
-    public void preAdd(Buffer buf)
+    public void preAdd()
     {
         //Nothing required
     }
