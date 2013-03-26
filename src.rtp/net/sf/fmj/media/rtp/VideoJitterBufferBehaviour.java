@@ -6,7 +6,6 @@ import javax.media.*;
 import javax.media.protocol.*;
 
 import net.sf.fmj.media.rtp.util.*;
-import net.sf.fmj.media.util.*;
 
 /**
  * Jitter buffer for video.
@@ -91,7 +90,7 @@ public class VideoJitterBufferBehaviour implements JitterBufferBehaviour
         running = true;
         if (videoThread == null)
         {
-            videoThread = new RTPMediaThread("Video Buffer Transfer")
+            videoThread = new RTPMediaThread("RTPStream")
             {
                 @Override
                 public void run()
@@ -116,7 +115,7 @@ public class VideoJitterBufferBehaviour implements JitterBufferBehaviour
                     }
                 }
             };
-            videoThread.setPriority(MediaThread.getVideoPriority());
+            videoThread.useVideoPriority();
             videoThread.start();
         }
     }

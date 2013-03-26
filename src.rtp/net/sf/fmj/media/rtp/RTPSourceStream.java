@@ -140,6 +140,7 @@ public class RTPSourceStream
      */
     protected void setFormat(Format format)
     {
+        this.format = format;
         Log.info(String.format("RTPSourceStream %s set format to %s.", this.hashCode(), format));
 
         if (format instanceof VideoFormat)

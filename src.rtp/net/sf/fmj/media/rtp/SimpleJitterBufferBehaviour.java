@@ -7,9 +7,9 @@ import javax.media.protocol.*;
 
 public class SimpleJitterBufferBehaviour implements JitterBufferBehaviour
 {
-
     private RTPSourceStream stream;
     private JitterBuffer q;
+    private BufferTransferHandler handler;
 
     public SimpleJitterBufferBehaviour(JitterBuffer q, RTPSourceStream stream)
     {
@@ -53,9 +53,9 @@ public class SimpleJitterBufferBehaviour implements JitterBufferBehaviour
     }
 
     @Override
-    public void setTransferHandler(BufferTransferHandler xiBuffertransferhandler)
+    public void setTransferHandler(BufferTransferHandler handler)
     {
-
+        this.handler = handler;
     }
 
 }

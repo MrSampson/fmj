@@ -225,10 +225,17 @@ public class AudioJitterBufferBehaviour implements JitterBufferBehaviour
         prebuffering.set(false);
 
         // Stop the various timer threads that are running.
-        readTimer.cancel();
-        readTimer = null;
-        adjusterTimer.cancel();
-        adjusterTimer = null;
+        if (readTimer != null)
+        {
+            readTimer.cancel();
+            readTimer = null;
+        }
+
+        if (adjusterTimer != null)
+        {
+            adjusterTimer.cancel();
+            adjusterTimer = null;
+        }
     }
 
     @Override
