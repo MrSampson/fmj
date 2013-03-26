@@ -21,13 +21,4 @@ public interface RTPSource
      */
     public int getSSRC();
 
-    /**
-     * Prebuffer the data.
-     */
-    public void prebuffer();
-
-    /**
-     * Set the buffer listener.
-     */
-    public void setBufferListener(BufferListener listener);
 }

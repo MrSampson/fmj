@@ -12,7 +12,7 @@ import net.sf.fmj.media.*;
 /**
  * A simple jitter buffer based on existing Java data structures.
  */
-public class JitterBufferSimple
+public class JitterBuffer
 {
     /**
      * The underlying datastore for the jitter buffer.
@@ -34,7 +34,7 @@ public class JitterBufferSimple
      *
      * @param maxCapacity The most packets that the queue will hold.
      */
-    public JitterBufferSimple(int maxCapacity)
+    public JitterBuffer(int maxCapacity)
     {
         this.maxCapacity = maxCapacity;
 
@@ -47,7 +47,7 @@ public class JitterBufferSimple
             {
                 long buf1SeqNo = buf1.getSequenceNumber();
                 long buf2SeqNo = buf2.getSequenceNumber();
-                return JitterBufferSimple.compareSeqNos(buf1SeqNo, buf2SeqNo);
+                return JitterBuffer.compareSeqNos(buf1SeqNo, buf2SeqNo);
             }
         });
     }
