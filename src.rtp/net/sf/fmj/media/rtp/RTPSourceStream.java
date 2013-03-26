@@ -31,21 +31,11 @@ public class RTPSourceStream
     extends BasicSourceStream
     implements PushBufferStream
 {
-    /**
-     * Sequence number of the last <tt>Buffer</tt> added to the queue.
-     */
-    private long                  lastSeqRecv        = NOT_SPECIFIED;
-    private static final int      NOT_SPECIFIED      = -1;
-
-
     private Format                format             = null;
-    private BufferTransferHandler handler            = null;
-
     private AtomicBoolean         started            = new AtomicBoolean();
 
     public JitterBuffer     q;
 
-    private DataSource datasource;
     private JitterBufferBehaviour behaviour;
     private JitterBufferStats stats;
     private JitterBufferCharts charts;
@@ -57,7 +47,6 @@ public class RTPSourceStream
      */
     public RTPSourceStream(DataSource datasource)
     {
-        this.datasource = datasource;
         datasource.setSourceStream(this);
 
         Log.info(String.format("Creating RTPSourceStream %s for datasource %s (SSRC=%s)",
@@ -65,7 +54,7 @@ public class RTPSourceStream
                                datasource.hashCode(),
                                datasource.getSSRC()));
 
-        q = new JitterBuffer(1); //TODO Fix
+        q = new JitterBuffer(1);
         behaviour = new SimpleJitterBufferBehaviour(q, this);
         stats = new JitterBufferStats(q);
         charts = new JitterBufferCharts(datasource);
@@ -152,7 +141,6 @@ public class RTPSourceStream
     protected void setFormat(Format format)
     {
         Log.info(String.format("RTPSourceStream %s set format to %s.", this.hashCode(), format));
-        this.format = format;
 
         if (format instanceof VideoFormat)
         {
