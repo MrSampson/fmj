@@ -13,8 +13,8 @@ import net.sf.fmj.media.util.*;
  */
 public class VideoJitterBufferBehaviour implements JitterBufferBehaviour
 {
-    private int minVideoPackets = ConfigUtils.getIntConfig("minVideoPackets", 4);
-    private int maxVideoPackets = ConfigUtils.getIntConfig("maxVideoPackets", 128);
+    private int minPackets = ConfigUtils.getIntConfig("video.minPackets", 4);
+    private int maxPackets = ConfigUtils.getIntConfig("video.maxPackets", 128);
 
     private final Lock            videoLock          = new ReentrantLock();
     private final Condition       videoCondition     = videoLock.newCondition();
@@ -35,7 +35,7 @@ public class VideoJitterBufferBehaviour implements JitterBufferBehaviour
      */
     public VideoJitterBufferBehaviour(JitterBuffer q, RTPSourceStream stream, JitterBufferStats stats)
     {
-        q.maxCapacity = maxVideoPackets;
+        q.maxCapacity = maxPackets;
         this.q = q;
         this.stream = stream;
         this.stats = stats;
@@ -46,7 +46,7 @@ public class VideoJitterBufferBehaviour implements JitterBufferBehaviour
      */
     private void transferVideoData()
     {
-        if (q.getCurrentSize() > minVideoPackets && handler != null)
+        if (q.getCurrentSize() > minPackets && handler != null)
         {
                 handler.transferData(stream);
         }
@@ -71,7 +71,7 @@ public class VideoJitterBufferBehaviour implements JitterBufferBehaviour
     @Override
     public void handleFull()
     {
-            while(q.getCurrentSize() > minVideoPackets)
+            while(q.getCurrentSize() > minPackets)
             {
                 stats.incrementDiscardedFull();
                 q.dropOldest();

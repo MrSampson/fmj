@@ -1,5 +1,3 @@
-// JitterBufferBehaviour.java
-// (C) COPYRIGHT METASWITCH NETWORKS 2013
 package net.sf.fmj.media.rtp;
 
 import javax.media.*;
