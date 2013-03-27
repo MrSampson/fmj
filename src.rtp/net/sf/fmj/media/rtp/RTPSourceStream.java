@@ -55,8 +55,8 @@ public class RTPSourceStream
                                datasource.getSSRC()));
 
         q = new JitterBuffer(1);
-        behaviour = new SimpleJitterBufferBehaviour(q, this);
         stats = new JitterBufferStats(q);
+        behaviour = new SimpleJitterBufferBehaviour(q, this, stats);
         charts = new JitterBufferCharts(datasource);
     }
 
@@ -143,18 +143,32 @@ public class RTPSourceStream
         this.format = format;
         Log.info(String.format("RTPSourceStream %s set format to %s.", this.hashCode(), format));
 
-        if (format instanceof VideoFormat)
+        // We default to the simple buffer. If the config forces its use then
+        // stop it from being changed.
+        if (ConfigUtils.getBooleanConfig("simpleBufferOnly", false))
         {
-            behaviour = new VideoJitterBufferBehaviour(q, this, stats);
+            if (format instanceof VideoFormat)
+            {
+                // Even the simple buffer needs a lot more space when dealing
+                // with video.
+                q.maxCapacity = 128;
+            }
         }
-        else if (format instanceof AudioFormat)
+        else
         {
-            behaviour = new AudioJitterBufferBehaviour(q, this, stats);
-        }
+            if (format instanceof VideoFormat)
+            {
+                behaviour = new VideoJitterBufferBehaviour(q, this, stats);
+            }
+            else if (format instanceof AudioFormat)
+            {
+                behaviour = new AudioJitterBufferBehaviour(q, this, stats);
+            }
 
-        if (started.get())
-        {
-            behaviour.start();
+            if (started.get())
+            {
+                behaviour.start();
+            }
         }
     }
 
