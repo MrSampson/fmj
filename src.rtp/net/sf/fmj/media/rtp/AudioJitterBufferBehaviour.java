@@ -65,7 +65,7 @@ public class AudioJitterBufferBehaviour implements JitterBufferBehaviour
             Log.warning(String.format("RTPSourceStream %s average delay (%s) " +
                                       "is greater than target (%s) so " +
                                       "dropping packet",
-                                      this.hashCode(),
+                                      stream.hashCode(),
                                       delay,
                                       targetDelayInPackets));
             q.dropOldest();
@@ -77,7 +77,7 @@ public class AudioJitterBufferBehaviour implements JitterBufferBehaviour
             Log.warning(String.format("RTPSourceStream %s average delay (%s) " +
                                       "is lower than target (%s) so " +
                                       "inserting packet",
-                                      this.hashCode(),
+                                      stream.hashCode(),
                                       delay,
                                       targetDelayInPackets));
 
@@ -119,14 +119,14 @@ public class AudioJitterBufferBehaviour implements JitterBufferBehaviour
                 // interval before we signal the transfer handler.
                 Log.info(String
                         .format("RTPSourceStream %s has completed prebuffering",
-                                this.hashCode()));
+                                stream.hashCode()));
                 prebuffering.set(false);
             }
             else
             {
                 Log.comment(String
                         .format("RTPSourceStream %s is prebuffering. Size is %s",
-                                this.hashCode(),
+                                stream.hashCode(),
                                 size));
             }
         }
@@ -164,7 +164,7 @@ public class AudioJitterBufferBehaviour implements JitterBufferBehaviour
             {
                 Log.warning(String
                         .format("Read from RTPSourceStream %s when empty",
-                                this.hashCode()));
+                                stream.hashCode()));
                 buffer.setFlags(Buffer.FLAG_SILENCE | Buffer.FLAG_NO_FEC);
                 stats.incrementSilenceInserted();
 
