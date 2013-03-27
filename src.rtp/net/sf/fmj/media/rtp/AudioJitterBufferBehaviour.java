@@ -24,8 +24,8 @@ public class AudioJitterBufferBehaviour implements JitterBufferBehaviour
 
     private TimerTask             readThread         = null;
     private TimerTask             adjusterThread     = null;
-    private Timer                 readTimer          = new Timer();
-    private Timer                 adjusterTimer      = new Timer();
+    private Timer                 readTimer          = null;
+    private Timer                 adjusterTimer      = null;
 
     private AverageDelayTracker delayTracker = new AverageDelayTracker();
     private JitterBuffer q;
@@ -188,11 +188,12 @@ public class AudioJitterBufferBehaviour implements JitterBufferBehaviour
         }
     }
     @Override
-    public void start()
+    public synchronized void start()
     {
         prebuffering.set(true);
         if (readThread == null)
         {
+            readTimer = new Timer();
             // Create a thread that will start now and then run every 20ms.
             // This thread will queue up additional tasks if execution takes
             // longer than 20ms. They may be executed in a burst.
@@ -211,6 +212,7 @@ public class AudioJitterBufferBehaviour implements JitterBufferBehaviour
         {
             // Create a thread that will run every 500ms. Delay the start
             // since we don't want to adjust till we have some data.
+            adjusterTimer = new Timer();
             adjusterThread = new TimerTask()
             {
                 @Override
@@ -226,7 +228,7 @@ public class AudioJitterBufferBehaviour implements JitterBufferBehaviour
     }
 
     @Override
-    public void stop()
+    public synchronized void stop()
     {
         prebuffering.set(false);
 
@@ -235,12 +237,14 @@ public class AudioJitterBufferBehaviour implements JitterBufferBehaviour
         {
             readTimer.cancel();
             readTimer = null;
+            readThread = null;
         }
 
         if (adjusterTimer != null)
         {
             adjusterTimer.cancel();
             adjusterTimer = null;
+            adjusterThread = null;
         }
     }
 
