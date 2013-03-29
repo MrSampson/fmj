@@ -81,38 +81,16 @@ public class RTPReceiver extends PacketFilter
      */
     public Packet handlePacket(RTPPacket rtpPacket)
     {
-        try
-        {
         // No processing is required for silence packets.
         if (rtpPacket.payloadType == 13)
         {
             return rtpPacket;
         }
 
-        SSRCInfo ssrcinfo = null;
-
+        try
+        {
         checkNetworkAddress(rtpPacket);
-
-        if (rtpPacket.base instanceof UDPPacket)
-        {
-            ssrcinfo = cache.get(rtpPacket.ssrc,
-                                 ((UDPPacket) rtpPacket.base).remoteAddress,
-                                 ((UDPPacket) rtpPacket.base).remotePort, 1);
-        }
-        else
-        {
-            ssrcinfo = cache.get(rtpPacket.ssrc, null, 0, 1);
-        }
-
-
-        if (ssrcinfo == null)
-        {
-            Log.warning(String.format(
-              "Dropping RTP packet because ssrcinfo couldn't be obtained " +
-              "from the cache network address. seqnum=%s, ssrc=%s",
-              rtpPacket.seqnum, rtpPacket.ssrc));
-            return null;
-        }
+        SSRCInfo ssrcinfo = getSsrcInfo(rtpPacket);
 
         //update lastHeardFrom fields in the cache for csrc's
         for (int i = 0; i < rtpPacket.csrc.length; i++)
@@ -421,6 +399,32 @@ public class RTPReceiver extends PacketFilter
         }
 
         return rtpPacket;
+    }
+
+    private SSRCInfo getSsrcInfo(RTPPacket rtpPacket) throws FailedToProcessPacketException
+    {
+        SSRCInfo ssrcInfo = null;
+
+        if (rtpPacket.base instanceof UDPPacket)
+        {
+            ssrcInfo = cache.get(rtpPacket.ssrc,
+                                 ((UDPPacket) rtpPacket.base).remoteAddress,
+                                 ((UDPPacket) rtpPacket.base).remotePort, 1);
+        }
+        else
+        {
+            ssrcInfo = cache.get(rtpPacket.ssrc, null, 0, 1);
+        }
+
+        if (ssrcInfo == null)
+        {
+            throw new FailedToProcessPacketException(
+                String.format("Dropping RTP packet because ssrcinfo couldn't be obtained " +
+                              "from the cache network address. seqnum=%s, ssrc=%s",
+                              rtpPacket.seqnum, rtpPacket.ssrc));
+        }
+
+        return ssrcInfo;
     }
 
     private void checkNetworkAddress(RTPPacket rtppacket) throws FailedToProcessPacketException
