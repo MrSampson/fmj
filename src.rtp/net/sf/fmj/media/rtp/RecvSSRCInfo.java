@@ -39,7 +39,7 @@ public class RecvSSRCInfo extends SSRCInfo implements ReceiveStream,
     {
         SSRCCache cache = getSSRCCache();
         if ((super.sourceInfo instanceof LocalParticipant)
-                && cache.sm.IsNonParticipating())
+                && cache.sessionManager.IsNonParticipating())
             return null;
         else
             return super.sourceInfo;
@@ -64,7 +64,7 @@ public class RecvSSRCInfo extends SSRCInfo implements ReceiveStream,
         Feedback reportblk = null;
         try
         {
-            LocalParticipant localpartc = cache.sm.getLocalParticipant();
+            LocalParticipant localpartc = cache.sessionManager.getLocalParticipant();
             reports = localpartc.getReports();
             for (int i = 0; i < reports.size(); i++)
             {

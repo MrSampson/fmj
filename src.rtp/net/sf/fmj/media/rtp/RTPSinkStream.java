@@ -102,12 +102,12 @@ public class RTPSinkStream implements BufferTransferHandler
             stream.read(current);
             if (!current.getFormat().matches(info.myformat))
             {
-                int payload = transmitter.cache.sm.formatinfo
+                int payload = transmitter.cache.sessionManager.formatinfo
                         .getPayload(current.getFormat());
                 if (payload == -1)
                     return;
                 LocalPayloadChangeEvent evt = new LocalPayloadChangeEvent(
-                        transmitter.cache.sm, info,
+                        transmitter.cache.sessionManager, info,
                         ((SSRCInfo) (info)).payloadType, payload);
                 transmitter.cache.eventhandler.postEvent(evt);
                 info.payloadType = payload;

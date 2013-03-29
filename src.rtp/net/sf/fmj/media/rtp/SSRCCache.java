@@ -34,7 +34,7 @@ public class SSRCCache
     int avgrtcpsize;
     Hashtable conflicttable;
     SSRCInfo ourssrc;
-    public RTPSessionMgr sm;
+    public RTPSessionMgr sessionManager;
 
     SSRCCache(RTPSessionMgr sm)
     {
@@ -58,7 +58,7 @@ public class SSRCCache
         sourceInfoCache = new RTPSourceInfoCache();
         sourceInfoCache.setMainCache(sourceInfoCache);
         sourceInfoCache.setSSRCCache(this);
-        this.sm = sm;
+        this.sessionManager = sm;
         eventhandler = new RTPEventHandler(sm);
         setclockrates();
     }
@@ -84,7 +84,7 @@ public class SSRCCache
         transstats = sm.transstats;
         sourceInfoCache = sic;
         sic.setSSRCCache(this);
-        this.sm = sm;
+        this.sessionManager = sm;
         eventhandler = new RTPEventHandler(sm);
     }
 
@@ -209,7 +209,7 @@ public class SSRCCache
                             stats.update(4, 1);
                             transstats.remote_coll++;
                             RemoteCollisionEvent evt = new RemoteCollisionEvent(
-                                    sm, info.ssrc);
+                                    sessionManager, info.ssrc);
                             eventhandler.postEvent(evt);
                             SSRCInfo ssrcinfo5 = null;
                             return ssrcinfo5;
@@ -274,10 +274,10 @@ public class SSRCCache
             {
                 LocalCollisionEvent levt = null;
                 if (info instanceof RecvSSRCInfo)
-                    levt = new LocalCollisionEvent(sm, (ReceiveStream) info,
+                    levt = new LocalCollisionEvent(sessionManager, (ReceiveStream) info,
                             ourssrc.ssrc);
                 else
-                    levt = new LocalCollisionEvent(sm, null, ourssrc.ssrc);
+                    levt = new LocalCollisionEvent(sessionManager, null, ourssrc.ssrc);
                 eventhandler.postEvent(levt);
             }
         }
@@ -353,7 +353,7 @@ public class SSRCCache
 
         for (int i = 96; i < 128; i++)
         {
-            javax.media.Format fmt = sm.formatinfo.get(i);
+            javax.media.Format fmt = sessionManager.formatinfo.get(i);
             if (fmt != null && (fmt instanceof AudioFormat))
                 clockrate[i] = (int) ((AudioFormat) fmt).getSampleRate();
             else

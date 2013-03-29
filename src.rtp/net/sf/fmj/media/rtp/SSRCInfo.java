@@ -369,7 +369,7 @@ public abstract class SSRCInfo implements Report
     public Participant getParticipant()
     {
         if ((sourceInfo instanceof LocalParticipant)
-                && cache.sm.IsNonParticipating())
+                && cache.sessionManager.IsNonParticipating())
             return null;
         else
             return sourceInfo;

@@ -16,6 +16,14 @@ import net.sf.fmj.media.rtp.util.*;
  */
 public class RTPReceiver extends PacketFilter
 {
+    private class FailedToProcessPacketException extends Exception
+    {
+        public FailedToProcessPacketException(String message)
+        {
+            super(message);
+        }
+    }
+
     private final SSRCCache cache;
     private final RTPDemultiplexer rtpdemultiplexer;
     private boolean rtcpstarted;
@@ -68,41 +76,32 @@ public class RTPReceiver extends PacketFilter
     /**
      * Handle an RTP packet.
      *
-     * @param rtppacket The packet to process.
+     * @param rtpPacket The packet to process.
      * @return The processed packet. Can be null
      */
-    public Packet handlePacket(RTPPacket rtppacket)
+    public Packet handlePacket(RTPPacket rtpPacket)
     {
-        // No processing is required for silence packets.
-        if (rtppacket.payloadType == 13)
+        try
         {
-            return rtppacket;
+        // No processing is required for silence packets.
+        if (rtpPacket.payloadType == 13)
+        {
+            return rtpPacket;
         }
 
         SSRCInfo ssrcinfo = null;
-        if (rtppacket.base instanceof UDPPacket)
-        {
-            InetAddress inetaddress = ((UDPPacket) rtppacket.base).remoteAddress;
-            if (cache.sm.bindtome
-                    && !cache.sm.isBroadcast(cache.sm.dataaddress)
-                    && !inetaddress.equals(cache.sm.dataaddress))
-            {
-                Log.warning(String.format(
-                  "Dropping RTP packet because of a problem with the " +
-                  "network address. seqnum=%s", rtppacket.seqnum));
-                return null;
-            }
-        }
 
-        if (rtppacket.base instanceof UDPPacket)
+        checkNetworkAddress(rtpPacket);
+
+        if (rtpPacket.base instanceof UDPPacket)
         {
-            ssrcinfo = cache.get(rtppacket.ssrc,
-                                 ((UDPPacket) rtppacket.base).remoteAddress,
-                                 ((UDPPacket) rtppacket.base).remotePort, 1);
+            ssrcinfo = cache.get(rtpPacket.ssrc,
+                                 ((UDPPacket) rtpPacket.base).remoteAddress,
+                                 ((UDPPacket) rtpPacket.base).remotePort, 1);
         }
         else
         {
-            ssrcinfo = cache.get(rtppacket.ssrc, null, 0, 1);
+            ssrcinfo = cache.get(rtpPacket.ssrc, null, 0, 1);
         }
 
 
@@ -111,32 +110,32 @@ public class RTPReceiver extends PacketFilter
             Log.warning(String.format(
               "Dropping RTP packet because ssrcinfo couldn't be obtained " +
               "from the cache network address. seqnum=%s, ssrc=%s",
-              rtppacket.seqnum, rtppacket.ssrc));
+              rtpPacket.seqnum, rtpPacket.ssrc));
             return null;
         }
 
         //update lastHeardFrom fields in the cache for csrc's
-        for (int i = 0; i < rtppacket.csrc.length; i++)
+        for (int i = 0; i < rtpPacket.csrc.length; i++)
         {
             SSRCInfo csrcinfo = null;
-            if (rtppacket.base instanceof UDPPacket)
-                csrcinfo = cache.get(rtppacket.csrc[i],
-                        ((UDPPacket) rtppacket.base).remoteAddress,
-                        ((UDPPacket) rtppacket.base).remotePort, 1);
+            if (rtpPacket.base instanceof UDPPacket)
+                csrcinfo = cache.get(rtpPacket.csrc[i],
+                        ((UDPPacket) rtpPacket.base).remoteAddress,
+                        ((UDPPacket) rtpPacket.base).remotePort, 1);
             else
-                csrcinfo = cache.get(rtppacket.csrc[i], null, 0, 1);
+                csrcinfo = cache.get(rtpPacket.csrc[i], null, 0, 1);
             if (csrcinfo != null)
-                csrcinfo.lastHeardFrom = ((Packet) (rtppacket)).receiptTime;
+                csrcinfo.lastHeardFrom = ((Packet) (rtpPacket)).receiptTime;
         }
 
         if (!ssrcinfo.sender)
         {
-            ssrcinfo.initsource(rtppacket.seqnum);
-            ssrcinfo.payloadType = rtppacket.payloadType;
+            ssrcinfo.initsource(rtpPacket.seqnum);
+            ssrcinfo.payloadType = rtpPacket.payloadType;
         }
 
-        int diff = rtppacket.seqnum - ssrcinfo.maxseq;
-        if (ssrcinfo.maxseq + 1 != rtppacket.seqnum && diff > 0)
+        int diff = rtpPacket.seqnum - ssrcinfo.maxseq;
+        if (ssrcinfo.maxseq + 1 != rtpPacket.seqnum && diff > 0)
             ssrcinfo.stats.update(RTPStats.PDULOST, diff - 1);
 
         //Packets arriving out of order have already been counted as lost (by
@@ -148,21 +147,21 @@ public class RTPReceiver extends PacketFilter
         boolean flag = false;
         if (ssrcinfo.probation > 0)
         {
-            if (rtppacket.seqnum == ssrcinfo.maxseq + 1)
+            if (rtpPacket.seqnum == ssrcinfo.maxseq + 1)
             {
                 ssrcinfo.probation--;
-                ssrcinfo.maxseq = rtppacket.seqnum;
+                ssrcinfo.maxseq = rtpPacket.seqnum;
                 if (ssrcinfo.probation == 0)
                     flag = true;
             } else
             {
                 ssrcinfo.probation = 1;
-                ssrcinfo.maxseq = rtppacket.seqnum;
+                ssrcinfo.maxseq = rtpPacket.seqnum;
                 ssrcinfo.stats.update(RTPStats.PDUMISORD);
             }
         } else if (diff < MAX_DROPOUT)
         {
-            if (rtppacket.seqnum < ssrcinfo.baseseq)
+            if (rtpPacket.seqnum < ssrcinfo.baseseq)
             {
                 /*
                  * Vincent Lucas: Without any lost, the seqnum cycles when
@@ -180,14 +179,14 @@ public class RTPReceiver extends PacketFilter
                     ssrcinfo.wrapped = true;
                 }
             }
-            ssrcinfo.maxseq = rtppacket.seqnum;
+            ssrcinfo.maxseq = rtpPacket.seqnum;
         } else if (diff <= (65536 - MAX_MISORDER))
         {
             ssrcinfo.stats.update(RTPStats.PDUINVALID);
-            if (rtppacket.seqnum == ssrcinfo.lastbadseq)
-                ssrcinfo.initsource(rtppacket.seqnum);
+            if (rtpPacket.seqnum == ssrcinfo.lastbadseq)
+                ssrcinfo.initsource(rtpPacket.seqnum);
             else
-                ssrcinfo.lastbadseq = rtppacket.seqnum + 1 & 0xffff;
+                ssrcinfo.lastbadseq = rtpPacket.seqnum + 1 & 0xffff;
         } else
         {
             /*
@@ -197,16 +196,16 @@ public class RTPReceiver extends PacketFilter
              */
             ssrcinfo.stats.update(RTPStats.PDUDUP);
         }
-        if (cache.sm.isUnicast())
+        if (cache.sessionManager.isUnicast())
             if (!rtcpstarted)
             {
-                cache.sm.startRTCPReports(((UDPPacket) rtppacket.base).remoteAddress);
+                cache.sessionManager.startRTCPReports(((UDPPacket) rtpPacket.base).remoteAddress);
                 rtcpstarted = true;
-                byte abyte0[] = cache.sm.controladdress.getAddress();
+                byte abyte0[] = cache.sessionManager.controladdress.getAddress();
                 int k = abyte0[3] & 0xff;
                 if ((k & 0xff) == 255)
                 {
-                    cache.sm.addUnicastAddr(cache.sm.controladdress);
+                    cache.sessionManager.addUnicastAddr(cache.sessionManager.controladdress);
                 }
                 else
                 {
@@ -220,27 +219,27 @@ public class RTPReceiver extends PacketFilter
                         flag2 = false;
                     }
                     if (flag2)
-                        cache.sm.addUnicastAddr(inetaddress1);
+                        cache.sessionManager.addUnicastAddr(inetaddress1);
                 }
-            } else if (!cache.sm
-                    .isSenderDefaultAddr(((UDPPacket) rtppacket.base).remoteAddress))
-                cache.sm.addUnicastAddr(((UDPPacket) rtppacket.base).remoteAddress);
+            } else if (!cache.sessionManager
+                    .isSenderDefaultAddr(((UDPPacket) rtpPacket.base).remoteAddress))
+                cache.sessionManager.addUnicastAddr(((UDPPacket) rtpPacket.base).remoteAddress);
 
         ssrcinfo.received++;
         ssrcinfo.stats.update(RTPStats.PDUPROCSD);
 
         if (ssrcinfo.probation > 0)
         {
-            probationList.put(ssrcinfo.ssrc, rtppacket.clone());
+            probationList.put(ssrcinfo.ssrc, rtpPacket.clone());
             Log.warning("Adding packet to probation list and dropping " +
-            		    "it. seqnum=" + rtppacket.seqnum);
+            		    "it. seqnum=" + rtpPacket.seqnum);
             return null;
         }
 
-        ssrcinfo.maxseq = rtppacket.seqnum;
+        ssrcinfo.maxseq = rtpPacket.seqnum;
 
         if (ssrcinfo.lastPayloadType != -1
-                && ssrcinfo.lastPayloadType != rtppacket.payloadType)
+                && ssrcinfo.lastPayloadType != rtpPacket.payloadType)
         {
 //            ssrcinfo.currentformat = null;
 //
@@ -278,24 +277,24 @@ public class RTPReceiver extends PacketFilter
             Log.warning("Payload type changed midstream "
                       + "expecting pt="
                       + ssrcinfo.lastPayloadType + ", got pt="
-                      + rtppacket.payloadType);
+                      + rtpPacket.payloadType);
 
 
         }
 
         if (ssrcinfo.currentformat == null)
         {
-            ssrcinfo.currentformat = cache.sm.formatinfo.get(
-                                                         rtppacket.payloadType);
+            ssrcinfo.currentformat = cache.sessionManager.formatinfo.get(
+                                                         rtpPacket.payloadType);
             if (ssrcinfo.currentformat == null)
             {
-                if (errorPayload != rtppacket.payloadType)
+                if (errorPayload != rtpPacket.payloadType)
                 {
                     Log.error("No format has been registered for RTP Payload type "
-                            + rtppacket.payloadType);
-                    errorPayload = rtppacket.payloadType;
+                            + rtpPacket.payloadType);
+                    errorPayload = rtpPacket.payloadType;
                 }
-                return rtppacket;
+                return rtpPacket;
             }
             if (ssrcinfo.dstream != null)
                 ssrcinfo.dstream.setFormat(ssrcinfo.currentformat);
@@ -303,8 +302,8 @@ public class RTPReceiver extends PacketFilter
 
         if (ssrcinfo.currentformat == null)
         {
-            Log.error("No Format for PT= " + rtppacket.payloadType);
-            return rtppacket;
+            Log.error("No Format for PT= " + rtpPacket.payloadType);
+            return rtpPacket;
         }
         if (ssrcinfo.dsource != null)
         {
@@ -312,35 +311,35 @@ public class RTPReceiver extends PacketFilter
                     .getControl(controlName);
             if (rtpcontrolimpl1 != null)
             {
-                javax.media.Format format = cache.sm.formatinfo
-                        .get(rtppacket.payloadType);
+                javax.media.Format format = cache.sessionManager.formatinfo
+                        .get(rtpPacket.payloadType);
                 rtpcontrolimpl1.currentformat = format;
             }
         }
         if (!initBC)
         {
-            ((BufferControlImpl) cache.sm.buffercontrol)
+            ((BufferControlImpl) cache.sessionManager.buffercontrol)
                     .initBufferControl(ssrcinfo.currentformat);
             initBC = true;
         }
         if (!ssrcinfo.streamconnect)
         {
-            DataSource datasource = (DataSource) cache.sm.dslist
+            DataSource datasource = (DataSource) cache.sessionManager.dslist
                     .get(ssrcinfo.ssrc);
             if (datasource == null)
             {
-                DataSource datasource1 = cache.sm.getDataSource(null);
+                DataSource datasource1 = cache.sessionManager.getDataSource(null);
                 if (datasource1 == null)
                 {
-                    datasource = cache.sm.createNewDS(null);
-                    cache.sm.setDefaultDSassigned(ssrcinfo.ssrc);
-                } else if (!cache.sm.isDefaultDSassigned())
+                    datasource = cache.sessionManager.createNewDS(null);
+                    cache.sessionManager.setDefaultDSassigned(ssrcinfo.ssrc);
+                } else if (!cache.sessionManager.isDefaultDSassigned())
                 {
                     datasource = datasource1;
-                    cache.sm.setDefaultDSassigned(ssrcinfo.ssrc);
+                    cache.sessionManager.setDefaultDSassigned(ssrcinfo.ssrc);
                 } else
                 {
-                    datasource = cache.sm.createNewDS(ssrcinfo.ssrc);
+                    datasource = cache.sessionManager.createNewDS(ssrcinfo.ssrc);
                 }
             }
             javax.media.protocol.PushBufferStream apushbufferstream[] = datasource
@@ -352,8 +351,8 @@ public class RTPReceiver extends PacketFilter
                     .getControl(controlName);
             if (rtpcontrolimpl2 != null)
             {
-                javax.media.Format format1 = cache.sm.formatinfo
-                        .get(rtppacket.payloadType);
+                javax.media.Format format1 = cache.sessionManager.formatinfo
+                        .get(rtpPacket.payloadType);
                 rtpcontrolimpl2.currentformat = format1;
                 rtpcontrolimpl2.stream = ssrcinfo;
             }
@@ -364,42 +363,42 @@ public class RTPReceiver extends PacketFilter
         if (!ssrcinfo.newrecvstream)
         {
             NewReceiveStreamEvent newreceivestreamevent = new NewReceiveStreamEvent(
-                    cache.sm, (ReceiveStream) ssrcinfo);
+                    cache.sessionManager, (ReceiveStream) ssrcinfo);
             ssrcinfo.newrecvstream = true;
             cache.eventhandler.postEvent(newreceivestreamevent);
         }
         if (ssrcinfo.lastRTPReceiptTime != 0L
-                && ssrcinfo.lastPayloadType == rtppacket.payloadType)
+                && ssrcinfo.lastPayloadType == rtpPacket.payloadType)
         {
-            long l = ((Packet) (rtppacket)).receiptTime
+            long l = ((Packet) (rtpPacket)).receiptTime
                     - ssrcinfo.lastRTPReceiptTime;
             l = (l * cache.clockrate[ssrcinfo.payloadType]) / 1000L;
-            long l1 = rtppacket.timestamp - ssrcinfo.lasttimestamp;
+            long l1 = rtpPacket.timestamp - ssrcinfo.lasttimestamp;
             double d = l - l1;
             if (d < 0.0D)
                 d = -d;
             ssrcinfo.jitter += 0.0625D * (d - ssrcinfo.jitter);
         }
-        ssrcinfo.lastRTPReceiptTime = ((Packet) (rtppacket)).receiptTime;
-        ssrcinfo.lasttimestamp = rtppacket.timestamp;
-        ssrcinfo.payloadType = rtppacket.payloadType;
-        ssrcinfo.lastPayloadType = rtppacket.payloadType;
-        ssrcinfo.bytesreceived += rtppacket.payloadlength;
-        ssrcinfo.lastHeardFrom = ((Packet) (rtppacket)).receiptTime;
+        ssrcinfo.lastRTPReceiptTime = ((Packet) (rtpPacket)).receiptTime;
+        ssrcinfo.lasttimestamp = rtpPacket.timestamp;
+        ssrcinfo.payloadType = rtpPacket.payloadType;
+        ssrcinfo.lastPayloadType = rtpPacket.payloadType;
+        ssrcinfo.bytesreceived += rtpPacket.payloadlength;
+        ssrcinfo.lastHeardFrom = ((Packet) (rtpPacket)).receiptTime;
         if (ssrcinfo.quiet)
         {
             ssrcinfo.quiet = false;
             ActiveReceiveStreamEvent activereceivestreamevent = null;
             if (ssrcinfo instanceof ReceiveStream)
                 activereceivestreamevent = new ActiveReceiveStreamEvent(
-                        cache.sm, ssrcinfo.sourceInfo, (ReceiveStream) ssrcinfo);
+                        cache.sessionManager, ssrcinfo.sourceInfo, (ReceiveStream) ssrcinfo);
             else
                 activereceivestreamevent = new ActiveReceiveStreamEvent(
-                        cache.sm, ssrcinfo.sourceInfo, null);
+                        cache.sessionManager, ssrcinfo.sourceInfo, null);
             cache.eventhandler.postEvent(activereceivestreamevent);
         }
 
-        SourceRTPPacket sourcertppacket = new SourceRTPPacket(rtppacket,ssrcinfo);
+        SourceRTPPacket sourcertppacket = new SourceRTPPacket(rtpPacket,ssrcinfo);
 
         if (ssrcinfo.dsource != null)
         {
@@ -414,6 +413,29 @@ public class RTPReceiver extends PacketFilter
             rtpdemultiplexer.demuxpayload(sourcertppacket);
         }
 
-        return rtppacket;
+        }
+        catch (FailedToProcessPacketException e)
+        {
+            Log.warning(e.getMessage());
+            rtpPacket = null;
+        }
+
+        return rtpPacket;
+    }
+
+    private void checkNetworkAddress(RTPPacket rtppacket) throws FailedToProcessPacketException
+    {
+        if (rtppacket.base instanceof UDPPacket)
+        {
+            InetAddress inetaddress = ((UDPPacket) rtppacket.base).remoteAddress;
+            if (cache.sessionManager.bindtome
+                    && !cache.sessionManager.isBroadcast(cache.sessionManager.dataaddress)
+                    && !inetaddress.equals(cache.sessionManager.dataaddress))
+            {
+                throw new FailedToProcessPacketException(
+                  String.format("Dropping RTP packet because of a problem with the " +
+                                "network address. seqnum=%s", rtppacket.seqnum));
+            }
+        }
     }
 }

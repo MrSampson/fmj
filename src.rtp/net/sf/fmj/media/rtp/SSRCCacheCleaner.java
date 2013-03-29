@@ -64,10 +64,10 @@ public class SSRCCacheCleaner implements Runnable
                         byepart = true;
                     ByeEvent evtbye = null;
                     if (info instanceof RecvSSRCInfo)
-                        evtbye = new ByeEvent(cache.sm, info.sourceInfo,
+                        evtbye = new ByeEvent(cache.sessionManager, info.sourceInfo,
                                 (ReceiveStream) info, info.byereason, byepart);
                     if (info instanceof PassiveSSRCInfo)
-                        evtbye = new ByeEvent(cache.sm, info.sourceInfo, null,
+                        evtbye = new ByeEvent(cache.sessionManager, info.sourceInfo, null,
                                 info.byereason, byepart);
                     cache.eventhandler.postEvent(evtbye);
                 }
@@ -82,7 +82,7 @@ public class SSRCCacheCleaner implements Runnable
                             laststream = true;
                         if (info instanceof ReceiveStream)
                         {
-                            event = new InactiveReceiveStreamEvent(cache.sm,
+                            event = new InactiveReceiveStreamEvent(cache.sessionManager,
                                     info.sourceInfo, (ReceiveStream) info,
                                     laststream);
                         } else
@@ -90,7 +90,7 @@ public class SSRCCacheCleaner implements Runnable
                             reportInterval *= 5D;
                             if (info.lastHeardFrom + reportInterval <= time)
                                 event = new InactiveReceiveStreamEvent(
-                                        cache.sm, info.sourceInfo, null,
+                                        cache.sessionManager, info.sourceInfo, null,
                                         laststream);
                         }
                         if (event != null)
@@ -116,10 +116,10 @@ public class SSRCCacheCleaner implements Runnable
                                 && sourceInfo.getStreamCount() == 0)
                             byepart = true;
                         if (info instanceof ReceiveStream)
-                            evt = new TimeoutEvent(cache.sm, info.sourceInfo,
+                            evt = new TimeoutEvent(cache.sessionManager, info.sourceInfo,
                                     (ReceiveStream) info, byepart);
                         else
-                            evt = new TimeoutEvent(cache.sm, info.sourceInfo,
+                            evt = new TimeoutEvent(cache.sessionManager, info.sourceInfo,
                                     null, byepart);
                         cache.eventhandler.postEvent(evt);
                     }

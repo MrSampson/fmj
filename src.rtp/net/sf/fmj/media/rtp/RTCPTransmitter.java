@@ -20,7 +20,7 @@ public class RTCPTransmitter
         sdescounter = 0;
         ssrcInfo = null;
         this.cache = cache;
-        stats = cache.sm.defaultstats;
+        stats = cache.sessionManager.defaultstats;
     }
 
     public RTCPTransmitter(SSRCCache cache, int port, String address)
@@ -39,7 +39,7 @@ public class RTCPTransmitter
     {
         this(cache);
         setSender(sender);
-        stats = cache.sm.defaultstats;
+        stats = cache.sessionManager.defaultstats;
     }
 
     public void bye(int ssrc, byte reason[])
@@ -234,7 +234,7 @@ public class RTCPTransmitter
             if (ssrcInfo instanceof SendSSRCInfo)
             {
                 ((SendSSRCInfo) ssrcInfo).stats.total_rtcp++;
-                cache.sm.transstats.rtcp_sent++;
+                cache.sessionManager.transstats.rtcp_sent++;
             }
             cache.updateavgrtcpsize(((Packet) (p)).length);
             if (cache.initial)
@@ -244,7 +244,7 @@ public class RTCPTransmitter
         } catch (IOException e)
         {
             stats.update(6, 1);
-            cache.sm.transstats.transmit_failed++;
+            cache.sessionManager.transstats.transmit_failed++;
         }
     }
 }
