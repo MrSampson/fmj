@@ -89,28 +89,10 @@ public class RTPReceiver extends PacketFilter
 
         try
         {
-        checkNetworkAddress(rtpPacket);
-        SSRCInfo ssrcinfo = getSsrcInfo(rtpPacket);
-
-        //update lastHeardFrom fields in the cache for csrc's
-        for (int i = 0; i < rtpPacket.csrc.length; i++)
-        {
-            SSRCInfo csrcinfo = null;
-            if (rtpPacket.base instanceof UDPPacket)
-                csrcinfo = cache.get(rtpPacket.csrc[i],
-                        ((UDPPacket) rtpPacket.base).remoteAddress,
-                        ((UDPPacket) rtpPacket.base).remotePort, 1);
-            else
-                csrcinfo = cache.get(rtpPacket.csrc[i], null, 0, 1);
-            if (csrcinfo != null)
-                csrcinfo.lastHeardFrom = ((Packet) (rtpPacket)).receiptTime;
-        }
-
-        if (!ssrcinfo.sender)
-        {
-            ssrcinfo.initsource(rtpPacket.seqnum);
-            ssrcinfo.payloadType = rtpPacket.payloadType;
-        }
+            checkNetworkAddress(rtpPacket);
+            SSRCInfo ssrcinfo = getSsrcInfo(rtpPacket);
+            processCsrcs(rtpPacket);
+            initSsrcInfoIfRequired(rtpPacket, ssrcinfo);
 
         int diff = rtpPacket.seqnum - ssrcinfo.maxseq;
         if (ssrcinfo.maxseq + 1 != rtpPacket.seqnum && diff > 0)
@@ -162,7 +144,7 @@ public class RTPReceiver extends PacketFilter
         {
             ssrcinfo.stats.update(RTPStats.PDUINVALID);
             if (rtpPacket.seqnum == ssrcinfo.lastbadseq)
-                ssrcinfo.initsource(rtpPacket.seqnum);
+                ssrcinfo.initSource(rtpPacket.seqnum);
             else
                 ssrcinfo.lastbadseq = rtpPacket.seqnum + 1 & 0xffff;
         } else
@@ -399,6 +381,32 @@ public class RTPReceiver extends PacketFilter
         }
 
         return rtpPacket;
+    }
+
+    private void initSsrcInfoIfRequired(RTPPacket rtpPacket, SSRCInfo ssrcinfo)
+    {
+        if (!ssrcinfo.sender)
+        {
+            ssrcinfo.initSource(rtpPacket.seqnum);
+            ssrcinfo.payloadType = rtpPacket.payloadType;
+        }
+    }
+
+    private void processCsrcs(RTPPacket rtpPacket)
+    {
+        //update lastHeardFrom fields in the cache for csrc's
+        for (int i = 0; i < rtpPacket.csrc.length; i++)
+        {
+            SSRCInfo csrcinfo = null;
+            if (rtpPacket.base instanceof UDPPacket)
+                csrcinfo = cache.get(rtpPacket.csrc[i],
+                        ((UDPPacket) rtpPacket.base).remoteAddress,
+                        ((UDPPacket) rtpPacket.base).remotePort, 1);
+            else
+                csrcinfo = cache.get(rtpPacket.csrc[i], null, 0, 1);
+            if (csrcinfo != null)
+                csrcinfo.lastHeardFrom = ((Packet) (rtpPacket)).receiptTime;
+        }
     }
 
     private SSRCInfo getSsrcInfo(RTPPacket rtpPacket) throws FailedToProcessPacketException

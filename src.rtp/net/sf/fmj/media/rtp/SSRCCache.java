@@ -250,7 +250,7 @@ public class SSRCCache
                         return ssrcinfo3;
                     }
                     info = new SendSSRCInfo(this, ssrc);
-                    info.initsource((int) TrueRandom.rand());
+                    info.initSource((int) TrueRandom.rand());
                 }
                 if (mode == 1)
                     info = new RecvSSRCInfo(this, ssrc);

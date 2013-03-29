@@ -428,7 +428,7 @@ public abstract class SSRCInfo implements Report
         priv = new SourceDescription(8, null, 0, false);
     }
 
-    void initsource(int seqnum)
+    void initSource(int seqnum)
     {
         if (probation <= 0)
         {

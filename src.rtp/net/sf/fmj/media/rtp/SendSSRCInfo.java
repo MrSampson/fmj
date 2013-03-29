@@ -300,7 +300,7 @@ public class SendSSRCInfo extends SSRCInfo implements SenderReport, SendStream
         {
             inited = true;
             super.probation = 0;
-            initsource((int) TrueRandom.rand());
+            initSource((int) TrueRandom.rand());
             super.lasttimestamp = (int) TrueRandom.rand();
         }
         if (super.pds != null)
