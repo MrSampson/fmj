@@ -1,6 +1,5 @@
 package net.sf.fmj.media.rtp;
 
-import java.io.*;
 import java.net.*;
 
 import javax.media.rtp.*;
@@ -26,39 +25,18 @@ public class RTPReceiver extends PacketFilter
 
     //BufferControl initialized
     private boolean initBC = false;
-    private final String controlstr;
+    private final String controlName;
     private int errorPayload;
 
     public RTPReceiver(SSRCCache ssrccache, RTPDemultiplexer rtpdemultiplexer)
     {
         rtcpstarted = false;
         probationList = new SSRCTable();
-        controlstr = "javax.media.rtp.RTPControl";
+        controlName = "javax.media.rtp.RTPControl";
         errorPayload = -1;
         cache = ssrccache;
         this.rtpdemultiplexer = rtpdemultiplexer;
         setConsumer(null);
-    }
-
-    public RTPReceiver(SSRCCache ssrccache, RTPDemultiplexer rtpdemultiplexer,
-            DatagramSocket datagramsocket)
-    {
-        this(ssrccache, rtpdemultiplexer, (new RTPRawReceiver(datagramsocket,
-                ssrccache.sm.defaultstats)));
-    }
-
-    public RTPReceiver(SSRCCache ssrccache, RTPDemultiplexer rtpdemultiplexer,
-            int i, String s) throws UnknownHostException, IOException
-    {
-        this(ssrccache, rtpdemultiplexer, (new RTPRawReceiver(i & -2, s,
-                ssrccache.sm.defaultstats)));
-    }
-
-    public RTPReceiver(SSRCCache ssrccache, RTPDemultiplexer rtpdemultiplexer,
-            PacketSource packetsource)
-    {
-        this(ssrccache, rtpdemultiplexer);
-        setSource(packetsource);
     }
 
     @Override
@@ -331,7 +309,7 @@ public class RTPReceiver extends PacketFilter
         if (ssrcinfo.dsource != null)
         {
             RTPControlImpl rtpcontrolimpl1 = (RTPControlImpl) ssrcinfo.dsource
-                    .getControl(controlstr);
+                    .getControl(controlName);
             if (rtpcontrolimpl1 != null)
             {
                 javax.media.Format format = cache.sm.formatinfo
@@ -371,7 +349,7 @@ public class RTPReceiver extends PacketFilter
             ssrcinfo.dstream = (RTPSourceStream) apushbufferstream[0];
             ssrcinfo.dstream.setFormat(ssrcinfo.currentformat);
             RTPControlImpl rtpcontrolimpl2 = (RTPControlImpl) ssrcinfo.dsource
-                    .getControl(controlstr);
+                    .getControl(controlName);
             if (rtpcontrolimpl2 != null)
             {
                 javax.media.Format format1 = cache.sm.formatinfo
