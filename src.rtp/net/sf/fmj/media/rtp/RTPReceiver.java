@@ -88,41 +88,99 @@ public class RTPReceiver extends PacketFilter
      */
     public Packet handlePacket(RTPPacket rtpPacket)
     {
-        // No processing is required for silence packets.
-        if (rtpPacket.payloadType == 13)
-        {
-            return rtpPacket;
-        }
-
         try
         {
+            handleSilencePacket(rtpPacket);
             checkNetworkAddress(rtpPacket);
             SSRCInfo ssrcinfo = getSsrcInfo(rtpPacket);
             processCsrcs(rtpPacket);
             initSsrcInfoIfRequired(rtpPacket, ssrcinfo);
-            boolean flag = updateStats(rtpPacket, ssrcinfo);
+            boolean probationPacketToDemux = updateStats(rtpPacket, ssrcinfo);
             handleRTCP(rtpPacket);
             putPacketOnProbationIfRequired(rtpPacket, ssrcinfo);
 
-            // Only update the maxium sequence number seen after the probation
+            // Only update the maximum sequence number seen after the probation
             // check is performed.
             ssrcinfo.maxseq = rtpPacket.seqnum;
+
             performMisMatchedPayloadCheck(rtpPacket, ssrcinfo);
             initializeCurrentFormatIfRequired(rtpPacket, ssrcinfo);
             updateFormatOnDataSourceControl(rtpPacket, ssrcinfo);
             initBufferControlIfRequired(ssrcinfo);
-
-        connectStreamIfRequired(rtpPacket, ssrcinfo);
-
-        if (ssrcinfo.dsource != null)
-            ssrcinfo.active = true;
-        if (!ssrcinfo.newrecvstream)
-        {
-            NewReceiveStreamEvent newreceivestreamevent = new NewReceiveStreamEvent(
-                    cache.sessionManager, (ReceiveStream) ssrcinfo);
-            ssrcinfo.newrecvstream = true;
-            cache.eventhandler.postEvent(newreceivestreamevent);
+            connectStreamIfRequired(rtpPacket, ssrcinfo);
+            fireNewReceiveStreamEventIfRequired(ssrcinfo);
+            updateSsrcInfoStats(rtpPacket, ssrcinfo);
+            updateQuietStatusIfRequired(ssrcinfo);
+            demuxPacket(rtpPacket, ssrcinfo, probationPacketToDemux);
         }
+        catch (FailedToProcessPacketException e)
+        {
+            Log.warning(e.getMessage());
+            rtpPacket = null;
+        }
+        catch (PartiallyProcessedPacketException e)
+        {
+            String message = e.getMessage();
+            if (message != null)
+            {
+                Log.info(message);
+            }
+        }
+
+        return rtpPacket;
+    }
+
+    private void handleSilencePacket(RTPPacket rtpPacket) throws PartiallyProcessedPacketException
+    {
+        if (rtpPacket.payloadType == 13)
+        {
+            throw new PartiallyProcessedPacketException(null);
+        }
+    }
+
+    private void demuxPacket(RTPPacket rtpPacket,
+                             SSRCInfo ssrcinfo,
+                             boolean probationPacketToDemux)
+    {
+        if (ssrcinfo.dsource != null)
+        {
+            if (probationPacketToDemux)
+            {
+                // Demux a probation packet
+                RTPPacket rtppacket =
+                                (RTPPacket) probationList.remove(ssrcinfo.ssrc);
+
+                if (rtppacket != null)
+                {
+                        rtpdemultiplexer.demuxpayload(
+                                       new SourceRTPPacket(rtppacket,ssrcinfo));
+                }
+            }
+
+            // Demux the actual packet
+            SourceRTPPacket sourcertppacket = new SourceRTPPacket(rtpPacket, ssrcinfo);
+            rtpdemultiplexer.demuxpayload(sourcertppacket);
+        }
+    }
+
+    private void updateQuietStatusIfRequired(SSRCInfo ssrcinfo)
+    {
+        if (ssrcinfo.quiet)
+        {
+            ssrcinfo.quiet = false;
+            ActiveReceiveStreamEvent activereceivestreamevent = null;
+            if (ssrcinfo instanceof ReceiveStream)
+                activereceivestreamevent = new ActiveReceiveStreamEvent(
+                        cache.sessionManager, ssrcinfo.sourceInfo, (ReceiveStream) ssrcinfo);
+            else
+                activereceivestreamevent = new ActiveReceiveStreamEvent(
+                        cache.sessionManager, ssrcinfo.sourceInfo, null);
+            cache.eventhandler.postEvent(activereceivestreamevent);
+        }
+    }
+
+    private void updateSsrcInfoStats(RTPPacket rtpPacket, SSRCInfo ssrcinfo)
+    {
         if (ssrcinfo.lastRTPReceiptTime != 0L
                 && ssrcinfo.lastPayloadType == rtpPacket.payloadType)
         {
@@ -141,46 +199,17 @@ public class RTPReceiver extends PacketFilter
         ssrcinfo.lastPayloadType = rtpPacket.payloadType;
         ssrcinfo.bytesreceived += rtpPacket.payloadlength;
         ssrcinfo.lastHeardFrom = ((Packet) (rtpPacket)).receiptTime;
-        if (ssrcinfo.quiet)
-        {
-            ssrcinfo.quiet = false;
-            ActiveReceiveStreamEvent activereceivestreamevent = null;
-            if (ssrcinfo instanceof ReceiveStream)
-                activereceivestreamevent = new ActiveReceiveStreamEvent(
-                        cache.sessionManager, ssrcinfo.sourceInfo, (ReceiveStream) ssrcinfo);
-            else
-                activereceivestreamevent = new ActiveReceiveStreamEvent(
-                        cache.sessionManager, ssrcinfo.sourceInfo, null);
-            cache.eventhandler.postEvent(activereceivestreamevent);
-        }
+    }
 
-        SourceRTPPacket sourcertppacket = new SourceRTPPacket(rtpPacket,ssrcinfo);
-
-        if (ssrcinfo.dsource != null)
+    private void fireNewReceiveStreamEventIfRequired(SSRCInfo ssrcinfo)
+    {
+        if (!ssrcinfo.newrecvstream)
         {
-            if (flag)
-            {
-                RTPPacket rtppacket1 = (RTPPacket) probationList
-                        .remove(ssrcinfo.ssrc);
-                if (rtppacket1 != null)
-                    rtpdemultiplexer.demuxpayload(new SourceRTPPacket(
-                            rtppacket1, ssrcinfo));
-            }
-            rtpdemultiplexer.demuxpayload(sourcertppacket);
+            NewReceiveStreamEvent newreceivestreamevent = new NewReceiveStreamEvent(
+                    cache.sessionManager, (ReceiveStream) ssrcinfo);
+            ssrcinfo.newrecvstream = true;
+            cache.eventhandler.postEvent(newreceivestreamevent);
         }
-
-        }
-        catch (FailedToProcessPacketException e)
-        {
-            Log.warning(e.getMessage());
-            rtpPacket = null;
-        }
-        catch (PartiallyProcessedPacketException e)
-        {
-            Log.info(e.getMessage());
-        }
-
-        return rtpPacket;
     }
 
     private void connectStreamIfRequired(RTPPacket rtpPacket, SSRCInfo ssrcinfo)
@@ -191,16 +220,15 @@ public class RTPReceiver extends PacketFilter
 
             if (datasource == null)
             {
-                DataSource datasource1 = cache.sessionManager.getDataSource(null);
-                if (datasource1 == null)
+                DataSource dataSource = cache.sessionManager.getDataSource(null);
+                if (dataSource == null)
                 {
                     datasource = cache.sessionManager.createNewDS(null);
                     cache.sessionManager.setDefaultDSassigned(ssrcinfo.ssrc);
                 }
-                else if
-                (!cache.sessionManager.isDefaultDSassigned())
+                else if (!cache.sessionManager.isDefaultDSassigned())
                 {
-                    datasource = datasource1;
+                    datasource = dataSource;
                     cache.sessionManager.setDefaultDSassigned(ssrcinfo.ssrc);
                 }
                 else
@@ -227,6 +255,11 @@ public class RTPReceiver extends PacketFilter
             }
 
             ssrcinfo.streamConnect = true;
+        }
+
+        if (ssrcinfo.dsource != null)
+        {
+            ssrcinfo.active = true;
         }
     }
 
