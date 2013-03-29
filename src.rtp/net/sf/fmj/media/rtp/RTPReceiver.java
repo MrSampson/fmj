@@ -96,34 +96,7 @@ public class RTPReceiver extends PacketFilter
 
         boolean flag = updateStats(rtpPacket, ssrcinfo);
 
-        if (cache.sessionManager.isUnicast())
-            if (!rtcpstarted)
-            {
-                cache.sessionManager.startRTCPReports(((UDPPacket) rtpPacket.base).remoteAddress);
-                rtcpstarted = true;
-                byte abyte0[] = cache.sessionManager.controladdress.getAddress();
-                int k = abyte0[3] & 0xff;
-                if ((k & 0xff) == 255)
-                {
-                    cache.sessionManager.addUnicastAddr(cache.sessionManager.controladdress);
-                }
-                else
-                {
-                    InetAddress inetaddress1 = null;
-                    boolean flag2 = true;
-                    try
-                    {
-                        inetaddress1 = InetAddress.getLocalHost();
-                    } catch (UnknownHostException unknownhostexception)
-                    {
-                        flag2 = false;
-                    }
-                    if (flag2)
-                        cache.sessionManager.addUnicastAddr(inetaddress1);
-                }
-            } else if (!cache.sessionManager
-                    .isSenderDefaultAddr(((UDPPacket) rtpPacket.base).remoteAddress))
-                cache.sessionManager.addUnicastAddr(((UDPPacket) rtpPacket.base).remoteAddress);
+        handleRTCP(rtpPacket);
 
         ssrcinfo.received++;
         ssrcinfo.stats.update(RTPStats.PDUPROCSD);
@@ -321,6 +294,38 @@ public class RTPReceiver extends PacketFilter
         }
 
         return rtpPacket;
+    }
+
+    private void handleRTCP(RTPPacket rtpPacket)
+    {
+        if (cache.sessionManager.isUnicast())
+            if (!rtcpstarted)
+            {
+                cache.sessionManager.startRTCPReports(((UDPPacket) rtpPacket.base).remoteAddress);
+                rtcpstarted = true;
+                byte abyte0[] = cache.sessionManager.controladdress.getAddress();
+                int k = abyte0[3] & 0xff;
+                if ((k & 0xff) == 255)
+                {
+                    cache.sessionManager.addUnicastAddr(cache.sessionManager.controladdress);
+                }
+                else
+                {
+                    InetAddress inetaddress1 = null;
+                    boolean flag2 = true;
+                    try
+                    {
+                        inetaddress1 = InetAddress.getLocalHost();
+                    } catch (UnknownHostException unknownhostexception)
+                    {
+                        flag2 = false;
+                    }
+                    if (flag2)
+                        cache.sessionManager.addUnicastAddr(inetaddress1);
+                }
+            } else if (!cache.sessionManager
+                    .isSenderDefaultAddr(((UDPPacket) rtpPacket.base).remoteAddress))
+                cache.sessionManager.addUnicastAddr(((UDPPacket) rtpPacket.base).remoteAddress);
     }
 
     private boolean updateStats(RTPPacket rtpPacket, SSRCInfo ssrcinfo)
