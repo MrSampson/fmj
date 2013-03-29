@@ -93,22 +93,12 @@ public class RTPReceiver extends PacketFilter
             SSRCInfo ssrcinfo = getSsrcInfo(rtpPacket);
             processCsrcs(rtpPacket);
             initSsrcInfoIfRequired(rtpPacket, ssrcinfo);
+            boolean flag = updateStats(rtpPacket, ssrcinfo);
+            handleRTCP(rtpPacket);
+            putPacketOnProbationIfRequired(rtpPacket, ssrcinfo);
 
-        boolean flag = updateStats(rtpPacket, ssrcinfo);
-
-        handleRTCP(rtpPacket);
-
-        ssrcinfo.received++;
-        ssrcinfo.stats.update(RTPStats.PDUPROCSD);
-
-        if (ssrcinfo.probation > 0)
-        {
-            probationList.put(ssrcinfo.ssrc, rtpPacket.clone());
-            Log.warning("Adding packet to probation list and dropping " +
-            		    "it. seqnum=" + rtpPacket.seqnum);
-            return null;
-        }
-
+            // Only update the maxium sequence number seen after the probation
+            // check is performed.
         ssrcinfo.maxseq = rtpPacket.seqnum;
 
         if (ssrcinfo.lastPayloadType != -1
@@ -296,6 +286,18 @@ public class RTPReceiver extends PacketFilter
         return rtpPacket;
     }
 
+    private void putPacketOnProbationIfRequired(RTPPacket rtpPacket,
+                                                SSRCInfo ssrcinfo) throws FailedToProcessPacketException
+    {
+        if (ssrcinfo.probation > 0)
+        {
+            probationList.put(ssrcinfo.ssrc, rtpPacket.clone());
+            throw new FailedToProcessPacketException(
+              "Adding packet to probation list and dropping it. seqnum=" +
+              rtpPacket.seqnum);
+        }
+    }
+
     private void handleRTCP(RTPPacket rtpPacket)
     {
         if (cache.sessionManager.isUnicast())
@@ -392,6 +394,10 @@ public class RTPReceiver extends PacketFilter
              */
             ssrcinfo.stats.update(RTPStats.PDUDUP);
         }
+
+        ssrcinfo.received++;
+        ssrcinfo.stats.update(RTPStats.PDUPROCSD);
+
         return flag;
     }
 
