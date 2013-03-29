@@ -94,68 +94,8 @@ public class RTPReceiver extends PacketFilter
             processCsrcs(rtpPacket);
             initSsrcInfoIfRequired(rtpPacket, ssrcinfo);
 
-        int diff = rtpPacket.seqnum - ssrcinfo.maxseq;
-        if (ssrcinfo.maxseq + 1 != rtpPacket.seqnum && diff > 0)
-            ssrcinfo.stats.update(RTPStats.PDULOST, diff - 1);
+        boolean flag = updateStats(rtpPacket, ssrcinfo);
 
-        //Packets arriving out of order have already been counted as lost (by
-        //the clause above), so decrease the lost count.
-        if (diff > -MAX_MISORDER && diff < 0)
-            ssrcinfo.stats.update(RTPStats.PDULOST, -1);
-        if (ssrcinfo.wrapped)
-            ssrcinfo.wrapped = false;
-        boolean flag = false;
-        if (ssrcinfo.probation > 0)
-        {
-            if (rtpPacket.seqnum == ssrcinfo.maxseq + 1)
-            {
-                ssrcinfo.probation--;
-                ssrcinfo.maxseq = rtpPacket.seqnum;
-                if (ssrcinfo.probation == 0)
-                    flag = true;
-            } else
-            {
-                ssrcinfo.probation = 1;
-                ssrcinfo.maxseq = rtpPacket.seqnum;
-                ssrcinfo.stats.update(RTPStats.PDUMISORD);
-            }
-        } else if (diff < MAX_DROPOUT)
-        {
-            if (rtpPacket.seqnum < ssrcinfo.baseseq)
-            {
-                /*
-                 * Vincent Lucas: Without any lost, the seqnum cycles when
-                 * passing from 65535 to 0. Thus, diff is equal to -65535. But
-                 * if there have been losses, diff may be -65534, -65533, etc.
-                 * On the other hand, if diff is too close to 0 (i.e. -1, -2,
-                 * etc.), it may correspond to a packet out of sequence. This is
-                 * why it is a sound choice to differentiate between a cycle and
-                 * an out-of-sequence on the basis of a value in between the two
-                 * cases i.e. -65535 / 2.
-                 */
-                if (diff < -65535 / 2)
-                {
-                    ssrcinfo.cycles += 0x10000;
-                    ssrcinfo.wrapped = true;
-                }
-            }
-            ssrcinfo.maxseq = rtpPacket.seqnum;
-        } else if (diff <= (65536 - MAX_MISORDER))
-        {
-            ssrcinfo.stats.update(RTPStats.PDUINVALID);
-            if (rtpPacket.seqnum == ssrcinfo.lastbadseq)
-                ssrcinfo.initSource(rtpPacket.seqnum);
-            else
-                ssrcinfo.lastbadseq = rtpPacket.seqnum + 1 & 0xffff;
-        } else
-        {
-            /*
-             * TODO Boris Grozev: The case of diff==0 is caught in
-             * diff<MAX_DROPOUT and does NOT end up here. Is this the way it is
-             * supposed to work?
-             */
-            ssrcinfo.stats.update(RTPStats.PDUDUP);
-        }
         if (cache.sessionManager.isUnicast())
             if (!rtcpstarted)
             {
@@ -381,6 +321,73 @@ public class RTPReceiver extends PacketFilter
         }
 
         return rtpPacket;
+    }
+
+    private boolean updateStats(RTPPacket rtpPacket, SSRCInfo ssrcinfo)
+    {
+        int diff = rtpPacket.seqnum - ssrcinfo.maxseq;
+        if (ssrcinfo.maxseq + 1 != rtpPacket.seqnum && diff > 0)
+            ssrcinfo.stats.update(RTPStats.PDULOST, diff - 1);
+
+        //Packets arriving out of order have already been counted as lost (by
+        //the clause above), so decrease the lost count.
+        if (diff > -MAX_MISORDER && diff < 0)
+            ssrcinfo.stats.update(RTPStats.PDULOST, -1);
+        if (ssrcinfo.wrapped)
+            ssrcinfo.wrapped = false;
+        boolean flag = false;
+        if (ssrcinfo.probation > 0)
+        {
+            if (rtpPacket.seqnum == ssrcinfo.maxseq + 1)
+            {
+                ssrcinfo.probation--;
+                ssrcinfo.maxseq = rtpPacket.seqnum;
+                if (ssrcinfo.probation == 0)
+                    flag = true;
+            } else
+            {
+                ssrcinfo.probation = 1;
+                ssrcinfo.maxseq = rtpPacket.seqnum;
+                ssrcinfo.stats.update(RTPStats.PDUMISORD);
+            }
+        } else if (diff < MAX_DROPOUT)
+        {
+            if (rtpPacket.seqnum < ssrcinfo.baseseq)
+            {
+                /*
+                 * Vincent Lucas: Without any lost, the seqnum cycles when
+                 * passing from 65535 to 0. Thus, diff is equal to -65535. But
+                 * if there have been losses, diff may be -65534, -65533, etc.
+                 * On the other hand, if diff is too close to 0 (i.e. -1, -2,
+                 * etc.), it may correspond to a packet out of sequence. This is
+                 * why it is a sound choice to differentiate between a cycle and
+                 * an out-of-sequence on the basis of a value in between the two
+                 * cases i.e. -65535 / 2.
+                 */
+                if (diff < -65535 / 2)
+                {
+                    ssrcinfo.cycles += 0x10000;
+                    ssrcinfo.wrapped = true;
+                }
+            }
+            ssrcinfo.maxseq = rtpPacket.seqnum;
+        } else if (diff <= (65536 - MAX_MISORDER))
+        {
+            ssrcinfo.stats.update(RTPStats.PDUINVALID);
+            if (rtpPacket.seqnum == ssrcinfo.lastbadseq)
+                ssrcinfo.initSource(rtpPacket.seqnum);
+            else
+                ssrcinfo.lastbadseq = rtpPacket.seqnum + 1 & 0xffff;
+        } else
+        {
+            /*
+             * TODO Boris Grozev: The case of diff==0 is caught in
+             * diff<MAX_DROPOUT and does NOT end up here. Is this the way it is
+             * supposed to work?
+             */
+            ssrcinfo.stats.update(RTPStats.PDUDUP);
+        }
+        return flag;
     }
 
     private void initSsrcInfoIfRequired(RTPPacket rtpPacket, SSRCInfo ssrcinfo)
