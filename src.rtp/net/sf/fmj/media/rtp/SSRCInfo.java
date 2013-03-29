@@ -39,7 +39,7 @@ public abstract class SSRCInfo implements Report
     boolean sender;
     boolean ours;
     int ssrc;
-    boolean streamconnect;
+    boolean streamConnect;
     SSRCTable reports;
     boolean active;
     boolean newrecvstream;
@@ -104,7 +104,7 @@ public abstract class SSRCInfo implements Report
         inactivesent = false;
         sender = false;
         ours = false;
-        streamconnect = false;
+        streamConnect = false;
         reports = new SSRCTable();
         active = false;
         newrecvstream = false;
@@ -158,7 +158,7 @@ public abstract class SSRCInfo implements Report
         inactivesent = false;
         sender = false;
         ours = false;
-        streamconnect = false;
+        streamConnect = false;
         reports = new SSRCTable();
         active = false;
         newrecvstream = false;
@@ -207,7 +207,7 @@ public abstract class SSRCInfo implements Report
         reports = info.reports;
         ours = info.ours;
         ssrc = info.ssrc;
-        streamconnect = info.streamconnect;
+        streamConnect = info.streamConnect;
         newrecvstream = info.newrecvstream;
         recvstrmap = info.recvstrmap;
         newpartsent = info.newpartsent;

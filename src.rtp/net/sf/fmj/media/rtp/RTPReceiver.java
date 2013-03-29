@@ -2,6 +2,7 @@ package net.sf.fmj.media.rtp;
 
 import java.net.*;
 
+import javax.media.*;
 import javax.media.rtp.*;
 import javax.media.rtp.event.*;
 
@@ -108,60 +109,11 @@ public class RTPReceiver extends PacketFilter
             ssrcinfo.maxseq = rtpPacket.seqnum;
             performMisMatchedPayloadCheck(rtpPacket, ssrcinfo);
             initializeCurrentFormatIfRequired(rtpPacket, ssrcinfo);
+            updateFormatOnDataSourceControl(rtpPacket, ssrcinfo);
+            initBufferControlIfRequired(ssrcinfo);
 
-        if (ssrcinfo.dsource != null)
-        {
-            RTPControlImpl rtpcontrolimpl1 = (RTPControlImpl) ssrcinfo.dsource
-                    .getControl(controlName);
-            if (rtpcontrolimpl1 != null)
-            {
-                javax.media.Format format = cache.sessionManager.formatinfo
-                        .get(rtpPacket.payloadType);
-                rtpcontrolimpl1.currentformat = format;
-            }
-        }
-        if (!initBC)
-        {
-            ((BufferControlImpl) cache.sessionManager.buffercontrol)
-                    .initBufferControl(ssrcinfo.currentformat);
-            initBC = true;
-        }
-        if (!ssrcinfo.streamconnect)
-        {
-            DataSource datasource = (DataSource) cache.sessionManager.dslist
-                    .get(ssrcinfo.ssrc);
-            if (datasource == null)
-            {
-                DataSource datasource1 = cache.sessionManager.getDataSource(null);
-                if (datasource1 == null)
-                {
-                    datasource = cache.sessionManager.createNewDS(null);
-                    cache.sessionManager.setDefaultDSassigned(ssrcinfo.ssrc);
-                } else if (!cache.sessionManager.isDefaultDSassigned())
-                {
-                    datasource = datasource1;
-                    cache.sessionManager.setDefaultDSassigned(ssrcinfo.ssrc);
-                } else
-                {
-                    datasource = cache.sessionManager.createNewDS(ssrcinfo.ssrc);
-                }
-            }
-            javax.media.protocol.PushBufferStream apushbufferstream[] = datasource
-                    .getStreams();
-            ssrcinfo.dsource = datasource;
-            ssrcinfo.dstream = (RTPSourceStream) apushbufferstream[0];
-            ssrcinfo.dstream.setFormat(ssrcinfo.currentformat);
-            RTPControlImpl rtpcontrolimpl2 = (RTPControlImpl) ssrcinfo.dsource
-                    .getControl(controlName);
-            if (rtpcontrolimpl2 != null)
-            {
-                javax.media.Format format1 = cache.sessionManager.formatinfo
-                        .get(rtpPacket.payloadType);
-                rtpcontrolimpl2.currentformat = format1;
-                rtpcontrolimpl2.stream = ssrcinfo;
-            }
-            ssrcinfo.streamconnect = true;
-        }
+        connectStreamIfRequired(rtpPacket, ssrcinfo);
+
         if (ssrcinfo.dsource != null)
             ssrcinfo.active = true;
         if (!ssrcinfo.newrecvstream)
@@ -229,6 +181,79 @@ public class RTPReceiver extends PacketFilter
         }
 
         return rtpPacket;
+    }
+
+    private void connectStreamIfRequired(RTPPacket rtpPacket, SSRCInfo ssrcinfo)
+    {
+        if (!ssrcinfo.streamConnect)
+        {
+            DataSource datasource = (DataSource) cache.sessionManager.dataSourceList.get(ssrcinfo.ssrc);
+
+            if (datasource == null)
+            {
+                DataSource datasource1 = cache.sessionManager.getDataSource(null);
+                if (datasource1 == null)
+                {
+                    datasource = cache.sessionManager.createNewDS(null);
+                    cache.sessionManager.setDefaultDSassigned(ssrcinfo.ssrc);
+                }
+                else if
+                (!cache.sessionManager.isDefaultDSassigned())
+                {
+                    datasource = datasource1;
+                    cache.sessionManager.setDefaultDSassigned(ssrcinfo.ssrc);
+                }
+                else
+                {
+                    datasource = cache.sessionManager.createNewDS(ssrcinfo.ssrc);
+                }
+            }
+
+            javax.media.protocol.PushBufferStream apushbufferstream[] =
+                                                        datasource.getStreams();
+
+            ssrcinfo.dsource = datasource;
+            ssrcinfo.dstream = (RTPSourceStream) apushbufferstream[0];
+            ssrcinfo.dstream.setFormat(ssrcinfo.currentformat);
+
+            RTPControlImpl rtpControlImpl =
+                      (RTPControlImpl) ssrcinfo.dsource.getControl(controlName);
+
+            if (rtpControlImpl != null)
+            {
+                Format format = cache.sessionManager.formatinfo.get(rtpPacket.payloadType);
+                rtpControlImpl.currentformat = format;
+                rtpControlImpl.stream = ssrcinfo;
+            }
+
+            ssrcinfo.streamConnect = true;
+        }
+    }
+
+    private void updateFormatOnDataSourceControl(RTPPacket rtpPacket,
+                                                 SSRCInfo ssrcinfo)
+    {
+        if (ssrcinfo.dsource != null)
+        {
+            RTPControlImpl rtpControlImpl =
+                       (RTPControlImpl)ssrcinfo.dsource.getControl(controlName);
+
+            if (rtpControlImpl != null)
+            {
+                Format format = cache.sessionManager.formatinfo.get(rtpPacket.payloadType);
+                rtpControlImpl.currentformat = format;
+            }
+        }
+    }
+
+    private void initBufferControlIfRequired(SSRCInfo ssrcinfo)
+    {
+        if (!initBC)
+        {
+            ((BufferControlImpl) cache.sessionManager.buffercontrol)
+                    .initBufferControl(ssrcinfo.currentformat);
+            initBC = true;
+        }
     }
 
     private void initializeCurrentFormatIfRequired(RTPPacket rtpPacket,
