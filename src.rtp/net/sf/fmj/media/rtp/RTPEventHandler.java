@@ -5,6 +5,7 @@ import java.util.*;
 import javax.media.rtp.*;
 import javax.media.rtp.event.*;
 
+import net.sf.fmj.media.*;
 import net.sf.fmj.media.rtp.util.*;
 
 public class RTPEventHandler extends RTPMediaThread
@@ -53,6 +54,7 @@ public class RTPEventHandler extends RTPMediaThread
     public synchronized void postEvent(RTPEvent evt)
     {
         eventQueue.addElement(evt);
+        Log.info(String.format("Event was posted: %s", evt.toString()));
         notifyAll();
     }
 
