@@ -38,6 +38,7 @@ public class VideoJitterBufferBehaviour implements JitterBufferBehaviour
         this.q = q;
         this.stream = stream;
         this.stats = stats;
+        
     }
 
     /**
@@ -73,13 +74,20 @@ public class VideoJitterBufferBehaviour implements JitterBufferBehaviour
             while(q.getCurrentSize() > minPackets)
             {
                 stats.incrementDiscardedFull();
-                q.dropOldest();
+                q.dropOldest(true);
             }
     }
 
     @Override
     public void read(Buffer buffer)
     {
+    	if (JitterBufferTester.videoToDrop.get() > 0)
+    	{
+    		JitterBufferTester.videoToDrop.decrementAndGet();
+    		stats.incrementDiscardedShrink();
+    		q.dropOldest(true);
+    	}
+    		
         Buffer bufferToCopyFrom = q.get();
         buffer.copy(bufferToCopyFrom);
     }

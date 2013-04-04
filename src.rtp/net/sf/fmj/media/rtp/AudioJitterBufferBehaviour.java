@@ -68,7 +68,7 @@ public class AudioJitterBufferBehaviour implements JitterBufferBehaviour
                                       stream.hashCode(),
                                       delay,
                                       targetDelayInPackets));
-            q.dropOldest();
+            q.dropOldest(true);
             stats.incrementDiscardedShrink();
         }
         else if (delay < targetDelayInPackets - requiredDelta)
@@ -143,15 +143,15 @@ public class AudioJitterBufferBehaviour implements JitterBufferBehaviour
     public void handleFull()
     {
       stats.incrementDiscardedFull();
-      q.dropOldest();
+      q.dropOldest(true);
     }
 
     @Override
     public void read(Buffer buffer)
     {
-        if (tester.silenceInserted(buffer))
+        if (tester.replacedWithSilence(buffer))
         {
-            updateDelayAverage(q.get());
+            updateDelayAverage(q.get()); //This is replacing an existing packet.
         }
         else
         {
@@ -180,10 +180,9 @@ public class AudioJitterBufferBehaviour implements JitterBufferBehaviour
                 updateDelayAverage(bufferToCopyFrom);
             }
         }
-
-        if (JitterBufferTester.pleaseReset)
+        
+        if (JitterBufferTester.pleaseReset.getAndSet(false))
         {
-            JitterBufferTester.pleaseReset = false;
             q.reset();
         }
     }
@@ -251,7 +250,8 @@ public class AudioJitterBufferBehaviour implements JitterBufferBehaviour
     @Override
     public void preAdd()
     {
-        //Nothing required
+        tester.addPacketsIfRequired();
+        tester.dropPacketIfRequired();
     }
 
     @Override

@@ -130,7 +130,7 @@ public class JitterBuffer
     /**
      * Drop the oldest packet in the JB.
      */
-    public void dropOldest()
+    public void dropOldest(boolean denyFec)
     {
         //Remove the oldest element from the queue.
         Buffer buf = q.poll();
@@ -139,13 +139,16 @@ public class JitterBuffer
             Log.warning(String.format("Dropped oldest packet in jitter buffer with seqNo %s", buf.getSequenceNumber()));
         }
 
-        //And update the next oldest element to say that it shouldn't get FECed
-        buf = q.peek();
-
-        if (buf != null)
+        if (denyFec)
         {
-            buf.setFlags(buf.getFlags() | Buffer.FLAG_NO_FEC);
-            Log.warning(String.format("Setting NO_FEC on packet in jitter buffer with seqNo %s", buf.getSequenceNumber()));
+        	//And update the next oldest element to say that it shouldn't get FECed
+        	buf = q.peek();
+
+        	if (buf != null)
+        	{
+        		buf.setFlags(buf.getFlags() | Buffer.FLAG_NO_FEC);
+        		Log.warning(String.format("Setting NO_FEC on packet in jitter buffer with seqNo %s", buf.getSequenceNumber()));
+        	}
         }
     }
 
