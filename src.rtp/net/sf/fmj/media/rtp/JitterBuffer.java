@@ -1,284 +1,477 @@
-
 package net.sf.fmj.media.rtp;
-
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.*;
 
 import javax.media.*;
 
-import net.sf.fmj.media.*;
-
 /**
- * A simple jitter buffer based on existing Java data structures.
+ * Implements an RTP packet queue and the storage-related functionality of a
+ * jitter buffer for the purposes of {@link RTPSourceStream}. The effect of a
+ * complete jitter buffer is achieved through the combined use of
+ * <tt>JitterBuffer</tt> and <tt>JitterBufferBehaviour</tt>.
+ *
+ * @author Lyubomir Marinov
  */
-public class JitterBuffer
+class JitterBuffer
 {
     /**
-     * The underlying datastore for the jitter buffer.
-     *
-     * It allows concurrent access, has blocking semantics and stores it's
-     * objects in a priority order.
+     * The capacity of this instance in terms of the maximum number of
+     * <tt>Buffer</tt>s that it may contain.
      */
-    final private PriorityBlockingQueue<Buffer> q;
+    private int capacity;
 
     /**
-     * The max capacity of the jitter buffer in packets.
+     * The <tt>Buffer</tt>s of this <tt>JitterBuffer</tt> which may contain
+     * valid media data to be read out of this instance (referred to as
+     * &quot;fill&quot;) or may represent preallocated <tt>Buffer</tt> instances
+     * for the purposes of reducing the effects of allocation and garbage
+     * collection (referred to as &quot;free&quot;). The storage is of a
+     * circular nature with the first &quot;fill&quot; at index {@link #offset}
+     * and the number of &quot;fill&quot; equal to {@link #length}.
      */
-    public int               maxCapacity;
-    private final AtomicLong lastSeqNoReturned = new AtomicLong(Buffer.SEQUENCE_UNKNOWN);
-    private final AtomicLong lastSeqNoAdded    = new AtomicLong(Buffer.SEQUENCE_UNKNOWN);
+    private Buffer[] elements;
 
     /**
-     * Creates a new JB
-     *
-     * @param maxCapacity The most packets that the queue will hold.
+     * The number of &quot;fill&quot; <tt>Buffer</tt>s in {@link #elements}.
      */
-    public JitterBuffer(int maxCapacity)
+    private int length;
+
+    /**
+     * The index in {@link #elements} of the <tt>Buffer</tt>, if any, which has
+     * been retrieved from this queue and has not been returned yet.
+     */
+    private int locked;
+
+    /**
+     * The index in {@link #elements} of the first &quot;fill&quot;
+     * <tt>Buffer</tt>.
+     */
+    private int offset;
+
+    /**
+     * Initializes a new <tt>JitterBuffer</tt> instance with a specific capacity
+     * of <tt>Buffer</tt>s.
+     *
+     * @param capacity the capacity of the new instance in terms of number of
+     * <tt>Buffer</tt>s 
+     */
+    public JitterBuffer(int capacity)
     {
-        this.maxCapacity = maxCapacity;
+        if (capacity < 1)
+            throw new IllegalArgumentException("capacity");
 
-        //The packets are stored in order of sequence number.
-        q = new PriorityBlockingQueue<Buffer>(maxCapacity , new Comparator<Buffer>()
-        {
+        elements = new Buffer[capacity];
+        for (int i = 0; i < elements.length; i++)
+            elements[i] = new Buffer();
 
-            @Override
-            public int compare(Buffer buf1, Buffer buf2)
-            {
-                long buf1SeqNo = buf1.getSequenceNumber();
-                long buf2SeqNo = buf2.getSequenceNumber();
-                return JitterBuffer.compareSeqNos(buf1SeqNo, buf2SeqNo);
-            }
-        });
+        this.capacity = capacity;
+        length = 0;
+        locked = -1;
+        offset = 0;
     }
 
     /**
-     * Add a buffer to the JB
+     * Inserts <tt>buffer</tt> in its proper place in this queue according
+     * to its sequence number. The elements are always kept in ascending
+     * order by sequence number.
      *
-     * @param buffer The buffer to add.
+     * TODO: Check for duplicate packets
      *
-     * TODO - Race in the dupe detection code. But it's best effort so that's fine.
+     * @param buffer the <tt>Buffer</tt> to insert in this queue
+     * @see #insert(Buffer)
      */
-    public void add(Buffer buffer)
+    public void addPkt(Buffer buffer)
     {
-        boolean success = false;
-        long seqNo = buffer.getSequenceNumber();
+        assertLocked(buffer);
+        if (noMoreFree())
+            throw new IllegalStateException("noMoreFree");
 
-        if (seqNo == lastSeqNoAdded.get())
+        long firstSN = getFirstSeq();
+        long lastSN = getLastSeq();
+        long bufferSN = buffer.getSequenceNumber();
+
+        if (firstSN == Buffer.SEQUENCE_UNKNOWN
+                && lastSN == Buffer.SEQUENCE_UNKNOWN)
+            append(buffer);
+        else if (bufferSN < firstSN)
+            prepend(buffer);
+        else if (firstSN < bufferSN && bufferSN < lastSN)
+            insert(buffer);
+        else if (bufferSN > lastSN)
+            append(buffer);
+        else //only if (bufferSN == firstSN) || (bufferSN == lastSN)?
+            returnFree(buffer);
+
+        locked = -1;
+    }
+
+    /**
+     * Adds <tt>buffer</tt> to the end of this queue.
+     *
+     * @param buffer the <tt>Buffer</tt> to be added to the end of this
+     * queue
+     */
+    private void append(Buffer buffer)
+    {
+        int index = (offset + length) % capacity;
+
+        if (index != locked)
         {
-            Log.warning(String.format("Dropping duplicate packet from jitter buffer with seqNo %s", seqNo));
+            elements[locked] = elements[index];
+            elements[index] = buffer;
         }
+        length++;
+    }
+
+    /**
+     * Asserts that a <tt>Buffer</tt> has been retrieved from this
+     * <tt>JitterBuffer</tt> and has not been returned yet.
+     *
+     * @throws IllegalStateException if no <tt>Buffer</tt> has been retrieved
+     * from this <tt>JitterBuffer</tt> and has not been returned yet
+     */
+    private void assertLocked(Buffer buffer)
+        throws IllegalStateException
+    {
+        if (locked == -1)
+        {
+            throw new IllegalStateException(
+                    "No Buffer has been retrieved from this JitterBuffer"
+                        + " and has not been returned yet.");
+        }
+        if (buffer != elements[locked])
+            throw new IllegalArgumentException("buffer");
+    }
+
+    /**
+     * Asserts that no <tt>Buffer</tt> has been retrieved from this
+     * <tt>JitterBuffer</tt> and has not been returned yet.
+     *
+     * @throws IllegalStateException if a <tt>Buffer</tt> has been retrieved
+     * from this <tt>JitterBuffer</tt> and has not been returned yet
+     */
+    private void assertNotLocked()
+        throws IllegalStateException
+    {
+        if (locked != -1)
+        {
+            throw new IllegalStateException(
+                    "A Buffer has been retrieved from this JitterBuffer"
+                        + " and has not been returned yet.");
+        }
+    }
+
+    void dropFill(int index)
+    {
+        assertNotLocked();
+        if ((index < 0) || (index >= length))
+            throw new IndexOutOfBoundsException(Integer.toString(index));
+
+        index = (offset + index) % capacity;
+
+        Buffer buffer = elements[index];
+
+        if (index == offset)
+            offset = (offset + 1) % capacity;
         else
         {
-            success = q.offer(buffer);
+            int end = (offset + length - 1) % capacity;
 
-            if (!success)
+            if (index != end)
             {
-                // TODO While we're using an unbounded queue, it's actually
-                // impossible to hit this.
-                Log.warning("Failed to add a buffer to jitter buffer. This is usually because it is full.");
-            }
-            else
-            {
-                if (lastSeqNoAdded.get() == Buffer.SEQUENCE_UNKNOWN)
+                while (index != offset)
                 {
-                    lastSeqNoAdded.set(seqNo);
+                    int i = index - 1;
+
+                    if (i < 0)
+                        i = capacity - 1;
+                    elements[index] = elements[i];
+                    index = i;
                 }
-                else if (seqNo != Buffer.SEQUENCE_UNKNOWN &&
-                        compareSeqNos(seqNo, lastSeqNoAdded.get()) > 0)
-                {
-                    // The seqNo we've just added is later than the last added one
-                    // so update it.
-                    lastSeqNoAdded.set(seqNo);
-                }
+                elements[index] = buffer;
+                offset = (offset + 1) % capacity;
             }
         }
+
+        length--;
+        locked = index;
+        returnFree(buffer);
     }
 
     /**
-     * Get a buffer from the jitter buffer, blocking until data is available.
-     *
-     * It will never return null.
-
-     * @return the buffer.
+     * Removes the first element (the one with the least sequence number)
+     * from <tt>fill</tt> and releases it to be reused (adds it to
+     * <tt>free</tt>)
      */
-    public Buffer get()
+    public void dropFirstFill()
     {
-        Buffer retVal = null;
+        returnFree(getFill());
+    }
 
-        while (retVal == null)
+    /**
+     * Determines whether there are &quot;fill&quot; <tt>Buffer<tt>s in this
+     * queue.
+     *
+     * @return <tt>true</tt> if there are &quot;fill&quot; <tt>Buffer</tt>s in
+     * this queue; otherwise, <tt>false</tt>
+     */
+    boolean fillNotEmpty()
+    {
+        return (getFillCount() != 0);
+    }
+
+    /**
+     * Determines whether there are &quot;free&quot; <tt>Buffer<tt>s in this
+     * queue.
+     *
+     * @return <tt>true</tt> if there are &quot;free&quot; <tt>Buffer</tt>s in
+     * this queue; otherwise, <tt>false</tt>
+     */
+    boolean freeNotEmpty()
+    {
+        return (getFreeCount() != 0);
+    }
+
+    /**
+     * Gets the capacity in (RTP) packets of this queue/jitter buffer.
+     *
+     * @return the capacity in (RTP) packets of this queue/jitter buffer
+     */
+    public synchronized int getCapacity()
+    {
+        return capacity;
+    }
+
+    /**
+     * Pops the element/<tt>Buffer</tt> at the head of this queue which contains
+     * valid media data.
+     *
+     * @return the element/<tt>Buffer</tt> at the head of this queue which
+     * contains valid media data
+     */
+    public Buffer getFill()
+    {
+        assertNotLocked();
+        if (noMoreFill())
+            throw new IllegalStateException("noMoreFill");
+
+        int index = offset;
+        Buffer buffer = elements[index];
+
+        offset = (offset + 1) % capacity;
+        length--;
+        locked = index;
+        return buffer;
+    }
+
+    public Buffer getFill(int index)
+    {
+        if ((index < 0) || (index >= length))
+            throw new IndexOutOfBoundsException(Integer.toString(index));
+
+        return elements[(offset + index) % capacity];
+    }
+
+    /**
+     * Gets the number of &quot;fill&quot; <tt>Buffer</tt>s in this queue.
+     *
+     * @return the number of &quot;fill&quot; <tt>Buffer</tt>s in this queue
+     */
+    public synchronized int getFillCount()
+    {
+        return length;
+    }
+
+    /**
+     * Gets the sequence number of the element/<tt>Buffer</tt> at the head
+     * of this queue or <tt>Buffer.SEQUENCE_UNKNOWN</tt> if this queue is empty.
+     *
+     * @return the sequence number of the element/<tt>Buffer</tt> at the
+     * head of this queue or <tt>Buffer.SEQUENCE_UNKNOWN</tt> if this queue is
+     * empty.
+     */
+    public long getFirstSeq()
+    {
+        return
+            (length == 0)
+                ? Buffer.SEQUENCE_UNKNOWN
+                : elements[offset].getSequenceNumber();
+    }
+
+    /**
+     * Retrieves a &quot;free&quot; <tt>Buffer</tt>s from this queue.
+     *
+     * @return a &quot;free&quot; <tt>Buffer</tt> from this queue
+     */
+    public Buffer getFree()
+    {
+        assertNotLocked();
+        if (noMoreFree())
+            throw new IllegalStateException("noMoreFree");
+
+        int index = (offset + length) % capacity;
+        Buffer buffer = elements[index];
+
+        locked = index;
+        return buffer;
+    }
+
+    /**
+     * Gets the number of &quot;free&quot; <tt>Buffer</tt>s in this queue.
+     *
+     * @return the number of &quot;free&quot; <tt>Buffer</tt>s in this queue
+     */
+    public int getFreeCount()
+    {
+        return (capacity - length);
+    }
+
+    /**
+     * Gets the sequence number of the element/<tt>Buffer</tt> at the tail
+     * of this queue or <tt>Buffer.SEQUENCE_UNKNOWN</tt> if this queue is empty.
+     *
+     * @return the sequence number of the element/<tt>Buffer</tt> at the tail
+     * of this queue or <tt>Buffer.SEQUENCE_UNKNOWN</tt> if this queue is empty.
+     */
+    public long getLastSeq()
+    {
+        return
+            (length == 0)
+                ? Buffer.SEQUENCE_UNKNOWN
+                : elements[(offset + length - 1) % capacity]
+                    .getSequenceNumber();
+    }
+
+    /**
+     * Inserts <tt>buffer</tt> in the correct place in the queue, so that
+     * the order is preserved. The order is by ascending sequence numbers.
+     *
+     * Note: This could potentially be slow, since all the elements 'bigger'
+     * than <tt>buffer</tt> are moved.
+     *
+     * @param buffer the <tt>Buffer</tt> to insert
+     */
+    private void insert(Buffer buffer)
+    {
+        int i = offset;
+        int end = (offset + length) % capacity;
+        long bufferSN = buffer.getSequenceNumber();
+
+        while (i != end)
         {
-            try
+            if (elements[i].getSequenceNumber() > bufferSN)
+                break;
+            if (++i >= capacity)
+                i = 0;
+        }
+
+        if (i == offset)
+            prepend(buffer);
+        else if (i == end)
+            append(buffer);
+        else
+        {
+            elements[locked] = elements[end];
+            for (int j = end; j != i;)
             {
-                retVal = q.take();
+                int k = j - 1;
+
+                if (k < 0)
+                    k = capacity - 1;
+                elements[j] = elements[k];
+                j = k;
             }
-            catch (InterruptedException e)
-            {
-                //No need to do anything, we're in a while loop.
-            }
-        }
-
-        long seqNo = retVal.getSequenceNumber();
-        if (seqNo != Buffer.SEQUENCE_UNKNOWN)
-        {
-          lastSeqNoReturned.set(seqNo);
-        }
-
-        return retVal;
-    }
-
-    /**
-     * Drop the oldest packet in the JB.
-     */
-    public void dropOldest(boolean denyFec)
-    {
-        //Remove the oldest element from the queue.
-        Buffer buf = q.poll();
-        if (buf != null)
-        {
-            Log.warning(String.format("Dropped oldest packet in jitter buffer with seqNo %s", buf.getSequenceNumber()));
-        }
-
-        if (denyFec)
-        {
-        	//And update the next oldest element to say that it shouldn't get FECed
-        	buf = q.peek();
-
-        	if (buf != null)
-        	{
-        		buf.setFlags(buf.getFlags() | Buffer.FLAG_NO_FEC);
-        		Log.warning(String.format("Setting NO_FEC on packet in jitter buffer with seqNo %s", buf.getSequenceNumber()));
-        	}
+            elements[i] = buffer;
+            length++;
         }
     }
 
     /**
-     * Removes all packets from the jitter buffer.
-     */
-    public void reset()
-    {
-        //TODO should this also clear all state?
-        q.clear();
-    }
-
-    /**
-     * @return The maximum capacity of the jitter buffer.
-     */
-    public int getMaxCapacity()
-    {
-        return maxCapacity;
-    }
-
-    /**
-     * @return The current number of packets in the jitter buffer.
-     */
-    public int getCurrentSize()
-    {
-        return q.size();
-    }
-
-    /**
-     * @return the last sequence number that the jitter buffer has returned.
-     */
-    public long getLastSeqNoReturned()
-    {
-        return lastSeqNoReturned.get();
-    }
-
-    /**
-     * @return the last sequence number that was added to the jitter buffer.
-     */
-    public long getLastSeqNoAdded()
-    {
-        return lastSeqNoAdded.get();
-    }
-
-    /**
-     * @return True when the JB is full.
-     */
-    public boolean isFull()
-    {
-        return remainingCapacity() == 0;
-    }
-
-    /**
-     * @return True when the JB is empty
-     */
-    public boolean isEmpty()
-    {
-        return q.size() == 0;
-    }
-
-    /**
-     * Calculate the ordering between two sequence numbers (dealing with
-     * wrapping)
+     * Determines whether there are no more &quot;fill&quot;
+     * elements/<tt>Buffer</tt>s in this queue.
      *
-     * Return 0  if buf1 == buf2
-     *      -ve  if buf1 <  buf2
-     *      +ve  if buf1 >  buf2
-     *
-     *  For example, if buf1 is 50 and buf2 is 53 then return -ve
-     *  When wrapping, e.g. buf1 is 65535 and buf2 is 2 then we
-     *  still need to return a -ve number (even though buf1 has a
-     *  greater magnitude)
-     *
+     * @return <tt>true</tt> if there are no more &quot;fill&quot;
+     * elements/<tt>Buffer</tt>s in this queue; otherwise, <tt>false</tt>
      */
-    private static int compareSeqNos(long buf1SeqNo, long buf2SeqNo)
+    boolean noMoreFill()
     {
-        int fullRange = 65536;
-        int oneThirdRange = fullRange / 3;
-        int twoThirdsRange = fullRange - oneThirdRange;
-
-        if (buf1SeqNo < oneThirdRange && buf2SeqNo > twoThirdsRange)
-        {
-            buf1SeqNo += fullRange;
-        }
-
-        if (buf2SeqNo < oneThirdRange && buf1SeqNo > twoThirdsRange)
-        {
-            buf2SeqNo += fullRange;
-        }
-
-        int result = (int)(buf1SeqNo - buf2SeqNo);
-        return result;
+        return (getFillCount() == 0);
     }
 
     /**
-     * @return The number of packets that can be stored in the jitter buffer
-     * before it's full.
+     * Determines whether there are no more &quot;free&quot;
+     * elements/<tt>Buffer</tt>s in this queue.
+     *
+     * @return <tt>true</tt> if there are no more &quot;free&quot;
+     * elements/<tt>Buffer</tt>s in this queue; otherwise, <tt>false</tt>
      */
-    private int remainingCapacity()
+    boolean noMoreFree()
     {
-     return maxCapacity - q.size();
+        return (getFreeCount() == 0);
     }
 
     /**
-     * Checks whether there's any point adding a packet to the jitter buffer.
+     * Adds <tt>buffer</tt> to the beginning of this queue.
      *
-     * @param buffer The packet to check.
-     * @return True when a more recent packet has already been returned by the
-     * jitter buffer. False otherwise.
+     * @param buffer the <tt>Buffer</tt> to add to the beginning of this
+     * queue
      */
-    public boolean theShipHasSailed(Buffer buffer)
+    private void prepend(Buffer buffer)
     {
-        if (lastSeqNoReturned.get() == -1)
+        int index = offset - 1;
+
+        if (index < 0)
+            index = capacity - 1;
+        if (index != locked)
         {
-            return false;
+            elements[locked] = elements[index];
+            elements[index] = buffer;
         }
-
-        long incomingSeqNo = buffer.getSequenceNumber();
-        long latestAcceptableSeqNo = lastSeqNoReturned.get();
-
-        int result = compareSeqNos(incomingSeqNo, latestAcceptableSeqNo);
-
-        // A result of 0 indicates the numbers are the same - i.e. a dupe so
-        // return true.
-        // A positive number indicates that the incomingSeqNo was larger (i.e.
-        // later) than the last one we sent. This is good and means we can
-        // return false.
-        // A negative number indicates the incomingSeqNo was smaller so we
-        // should just throw it away, so return true.
-        return result <= 0;
+        offset = index;
+        length++;
     }
 
+    /**
+     * Returns (releases) <tt>buffer</tt> to the <tt>free</tt> queue.
+     *
+     * @param buffer the <tt>Buffer</tt> to return
+     */
+    public void returnFree(Buffer buffer)
+    {
+        assertLocked(buffer);
+
+        locked = -1;
+    }
+
+    /**
+     * Sets the capacity of this instance in terms of the maximum number of
+     * <tt>Buffer</tt>s that it may contain.
+     *
+     * @param capacity the capacity of this instance in terms of the maximum
+     * number of <tt>Buffer</tt>s that it may contain
+     */
+    public void setCapacity(int capacity)
+    {
+        assertNotLocked();
+        if (capacity < 1)
+            throw new IllegalArgumentException("capacity");
+
+        if (this.capacity == capacity)
+            return;
+
+        Buffer[] elements = new Buffer[capacity];
+
+        while (getFillCount() > capacity)
+            dropFirstFill();
+
+        int length = Math.min(getFillCount(), capacity);
+
+        for (int i = 0; i < length; i++)
+            elements[i] = getFill(i);
+        for (int i = length; i < capacity; i++)
+            elements[i] = new Buffer();
+
+        this.capacity = capacity;
+        this.elements = elements;
+        this.length = length;
+        this.offset = 0;
+    }
 }
