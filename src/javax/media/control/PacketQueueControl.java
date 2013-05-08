@@ -1,6 +1,6 @@
 package javax.media.control;
 
-import javax.media.*;
+import javax.media.Control;
 
 /**
  * Control for the packet queue
@@ -10,6 +10,36 @@ import javax.media.*;
 public interface PacketQueueControl extends Control
 {
     /**
+     * Returns the current approximate delay in milliseconds that the queue
+     * introduces.
+     *
+     * @return the current approximate delay in milliseconds that the queue
+     * introduces.
+     */
+    public int getCurrentDelayMs();
+
+    /**
+     * Returns the current approximate delay in number of packets that the queue
+     * introduces.
+     *
+     * @return the current approximate delay in number of packets that the queue
+     * introduces.
+     */
+    public int getCurrentDelayPackets();
+
+    /**
+     * Returns the number of elements currently in the queue
+     */
+    public int getCurrentPacketCount();
+
+    /**
+     *  Returns the current size of the queue in packets.
+     *
+     * @return the current size of the queue in packets.
+     */
+    public int getCurrentSizePackets();
+
+    /**
      * Returns the total number of packets discarded by the queue.
      *
      * @return the total number of packets discarded by the queue.
@@ -17,11 +47,11 @@ public interface PacketQueueControl extends Control
     public int getDiscarded();
 
     /**
-     * Returns the number of packets discarded by the queue while shrinking.
+     * Returns the number of packets discarded by the queue because it was full.
      *
-     * @return the number of packets discarded by the queue while shrinking.
+     * @return the number of packets discarded by the queue because it was full.
      */
-    public int getDiscardedShrink();
+    public int getDiscardedFull();
 
     /**
      * Returns the number of packets discarded by the queue because they were
@@ -40,36 +70,18 @@ public interface PacketQueueControl extends Control
     public int getDiscardedReset();
 
     /**
-     * Returns the number of packets discarded by the queue because it was full.
+     * Returns the number of packets discarded by the queue while shrinking.
      *
-     * @return the number of packets discarded by the queue because it was full.
+     * @return the number of packets discarded by the queue while shrinking.
      */
-    public int getDiscardedFull();
+    public int getDiscardedShrink();
 
     /**
-     * Returns the current approximate delay in milliseconds, that the queue
-     * introduces.
+     * Returns the maximum size that the queue reached (in number of packets).
      *
-     * @return the current approximate delay in milliseconds, that the queue
-     * introduces.
+     * @return the maximum size that the queue reached (in number of packets).
      */
-    public int getCurrentDelayMs();
-
-    /**
-     * Returns the current approximate delay in number of packets, that the queue
-     * introduces.
-     *
-     * @return the current approximate delay in number of packets, that the queue
-     * introduces.
-     */
-    public int getCurrentDelayPackets();
-
-    /**
-     *  Returns the current size of the queue in packets.
-     *
-     * @return the current size of the queue in packets.
-     */
-    public int getCurrentSizePackets();
+    public int getMaxSizeReached();
 
     /**
      * Whether the adaptive jitter buffer mode is enabled.
@@ -77,11 +89,4 @@ public interface PacketQueueControl extends Control
      * @return whether the adaptive jitter buffer mode is enabled.
      */
     public boolean isAdaptiveBufferEnabled();
-
-    /**
-     * Returns the number of elements currently in the queue
-     */
-    public int getCurrentPacketCount();
-
-    int getSilenceInserted();
 }
