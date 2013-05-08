@@ -32,7 +32,7 @@ public class JitterBufferTester
 		{
 			audioSilenceToInsert.decrementAndGet();
 			buffer.setFlags(Buffer.FLAG_SILENCE | Buffer.FLAG_NO_FEC);
-			stats.incrementSilenceInserted();
+//			stats.incrementSilenceInserted();
 			return true;
 		}
 		
@@ -46,8 +46,8 @@ public class JitterBufferTester
 				Buffer newBuffer = new Buffer();
 				newBuffer.setFlags(newBuffer.getFlags() | Buffer.FLAG_NO_DROP
 						| Buffer.FLAG_SILENCE | Buffer.FLAG_NO_FEC);
-				stats.incrementSilenceInserted();
-				q.add(newBuffer);
+//				stats.incrementSilenceInserted();
+//				q.add(newBuffer);
 			}
 		}
 	}
@@ -56,8 +56,8 @@ public class JitterBufferTester
 		if (audioPacketsToDiscard.get() > 0)
 		{
 			audioPacketsToDiscard.decrementAndGet();
-			q.dropOldest(!audioDiscardAllowFec.get());
-			stats.incrementDiscardedReset(1);
+//			q.dropOldest(!audioDiscardAllowFec.get());
+//			stats.incrementDiscardedReset(1);
 		}
 	}
 }

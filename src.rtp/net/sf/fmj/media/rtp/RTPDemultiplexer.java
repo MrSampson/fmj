@@ -51,7 +51,7 @@ public class RTPDemultiplexer
             buffer.setFlags(buffer.getFlags() | Buffer.FLAG_RTP_TIME);
             buffer.setSequenceNumber(rtpPacket.seqnum);
             buffer.setFormat(info.dstream.getFormat());
-            info.dstream.add(buffer);
+            info.dstream.add(buffer, true, rtpr);
         }
     }
 }
