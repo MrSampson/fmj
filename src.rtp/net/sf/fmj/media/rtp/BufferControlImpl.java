@@ -176,18 +176,9 @@ public class BufferControlImpl implements BufferControl
     private boolean inited = false;
     private long maxBuffer = NOT_SPECIFIED;
     private long maxThreshold = NOT_SPECIFIED;
-<<<<<<< HEAD
-    BufferControlPanel controlComp = null;
-    boolean threshold_enabled = true;
-    private int bufValue = NOT_SPECIFIED;
-    private int threshValue = NOT_SPECIFIED;
-    private boolean inited = false;
-    private Vector sourcestreamlist = new Vector(1);
-=======
     private Vector<RTPSourceStream> sourcestreamlist
         = new Vector<RTPSourceStream>(1);
     boolean threshold_enabled = true;
->>>>>>> c3ab8b0... Implements shrinking of the audio RTP packet queue/jitter buffer. Refactors the functionality related to the RTP packet queue/jitter buffer further for the purposes of readability.
 
     public BufferControlImpl()
     {
@@ -196,7 +187,7 @@ public class BufferControlImpl implements BufferControl
     protected void addSourceStream(RTPSourceStream s)
     {
         sourcestreamlist.addElement(s);
-//        s.setBufferControl(this); Unused so removing
+        s.setBufferControl(this);
     }
 
     public long getBufferLength()
@@ -281,7 +272,6 @@ public class BufferControlImpl implements BufferControl
             currBuffer = time;
             return time;
         }
-
         if (time == DEFAULT_VALUE)
             time = defBuffer;
         if (time == MAX_VALUE)
@@ -294,11 +284,8 @@ public class BufferControlImpl implements BufferControl
             currBuffer = defBuffer;
         else
             currBuffer = time;
-
-//        for (int i = 0; i < sourcestreamlist.size(); i++)
-//            ((RTPSourceStream) sourcestreamlist.elementAt(i))
-//                    .updateBuffer(currBuffer);
-//        Commented out as the code does nothing
+        for (int i = 0; i < sourcestreamlist.size(); i++)
+            sourcestreamlist.elementAt(i).updateBuffer(currBuffer);
 
         if (controlComp != null)
             controlComp.updateBuffer(currBuffer);
@@ -331,10 +318,8 @@ public class BufferControlImpl implements BufferControl
             currThreshold = t;
         if (t < 0L)
             currThreshold = 0L;
-//        for (int i = 0; i < sourcestreamlist.size(); i++)
-//            ((RTPSourceStream) sourcestreamlist.elementAt(i))
-//                    .updateThreshold(currThreshold);
-//        commented out as code does nothing
+        for (int i = 0; i < sourcestreamlist.size(); i++)
+            sourcestreamlist.elementAt(i).updateThreshold(currThreshold);
 
         if (controlComp != null)
             controlComp.updateThreshold(currThreshold);
