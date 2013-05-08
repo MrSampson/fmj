@@ -92,7 +92,7 @@ public abstract class RTPSourceInfo implements Participant
     synchronized void removeSSRC(SSRCInfo ssrcinfo)
     {
         if (ssrcinfo.dsource != null)
-            sic.ssrccache.sessionManager.removeDataSource(ssrcinfo.dsource);
+            sic.ssrccache.sm.removeDataSource(ssrcinfo.dsource);
         for (int i = 0; i < ssrc.length; i++)
         {
             if (ssrc[i] != ssrcinfo)

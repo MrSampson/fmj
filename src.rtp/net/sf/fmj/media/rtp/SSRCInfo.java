@@ -39,7 +39,7 @@ public abstract class SSRCInfo implements Report
     boolean sender;
     boolean ours;
     int ssrc;
-    boolean streamConnect;
+    boolean streamconnect;
     SSRCTable reports;
     boolean active;
     boolean newrecvstream;
@@ -104,7 +104,7 @@ public abstract class SSRCInfo implements Report
         inactivesent = false;
         sender = false;
         ours = false;
-        streamConnect = false;
+        streamconnect = false;
         reports = new SSRCTable();
         active = false;
         newrecvstream = false;
@@ -158,7 +158,7 @@ public abstract class SSRCInfo implements Report
         inactivesent = false;
         sender = false;
         ours = false;
-        streamConnect = false;
+        streamconnect = false;
         reports = new SSRCTable();
         active = false;
         newrecvstream = false;
@@ -207,7 +207,7 @@ public abstract class SSRCInfo implements Report
         reports = info.reports;
         ours = info.ours;
         ssrc = info.ssrc;
-        streamConnect = info.streamConnect;
+        streamconnect = info.streamconnect;
         newrecvstream = info.newrecvstream;
         recvstrmap = info.recvstrmap;
         newpartsent = info.newpartsent;
@@ -369,7 +369,7 @@ public abstract class SSRCInfo implements Report
     public Participant getParticipant()
     {
         if ((sourceInfo instanceof LocalParticipant)
-                && cache.sessionManager.IsNonParticipating())
+                && cache.sm.IsNonParticipating())
             return null;
         else
             return sourceInfo;
@@ -428,7 +428,7 @@ public abstract class SSRCInfo implements Report
         priv = new SourceDescription(8, null, 0, false);
     }
 
-    void initSource(int seqnum)
+    void initsource(int seqnum)
     {
         if (probation <= 0)
         {

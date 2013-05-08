@@ -86,7 +86,7 @@ public class RTPTransmitter
             sender.sendTo(p);
         } catch (IOException e)
         {
-            cache.sessionManager.transstats.transmit_failed++;
+            cache.sm.transstats.transmit_failed++;
         }
     }
 
@@ -106,8 +106,8 @@ public class RTPTransmitter
             transmit(p);
             info.stats.total_pdu++;
             info.stats.total_bytes = info.stats.total_bytes + b.getLength();
-            cache.sessionManager.transstats.rtp_sent++;
-            cache.sessionManager.transstats.bytes_sent = cache.sessionManager.transstats.bytes_sent
+            cache.sm.transstats.rtp_sent++;
+            cache.sm.transstats.bytes_sent = cache.sm.transstats.bytes_sent
                     + b.getLength();
             return;
         }

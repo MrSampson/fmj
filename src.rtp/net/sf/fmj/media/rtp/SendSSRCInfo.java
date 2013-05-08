@@ -92,7 +92,7 @@ public class SendSSRCInfo extends SSRCInfo implements SenderReport, SendStream
         {
         }
         SSRCCache cache = getSSRCCache();
-        cache.sessionManager.removeSendStream(this);
+        cache.sm.removeSendStream(this);
     }
 
     protected void createDS()
@@ -119,7 +119,7 @@ public class SendSSRCInfo extends SSRCInfo implements SenderReport, SendStream
     {
         SSRCCache cache = getSSRCCache();
         if ((super.sourceInfo instanceof LocalParticipant)
-                && cache.sessionManager.IsNonParticipating())
+                && cache.sm.IsNonParticipating())
             return null;
         else
             return super.sourceInfo;
@@ -144,7 +144,7 @@ public class SendSSRCInfo extends SSRCInfo implements SenderReport, SendStream
         Feedback reportblk = null;
         try
         {
-            Participant localpartc = cache.sessionManager.getLocalParticipant();
+            Participant localpartc = cache.sm.getLocalParticipant();
             reports = localpartc.getReports();
             for (int i = 0; i < reports.size(); i++)
             {
@@ -181,7 +181,7 @@ public class SendSSRCInfo extends SSRCInfo implements SenderReport, SendStream
         Feedback reportblk = null;
         try
         {
-            Participant localpartc = cache.sessionManager.getLocalParticipant();
+            Participant localpartc = cache.sm.getLocalParticipant();
             reports = localpartc.getReports();
             for (int i = 0; i < reports.size(); i++)
             {
@@ -300,7 +300,7 @@ public class SendSSRCInfo extends SSRCInfo implements SenderReport, SendStream
         {
             inited = true;
             super.probation = 0;
-            initSource((int) TrueRandom.rand());
+            initsource((int) TrueRandom.rand());
             super.lasttimestamp = (int) TrueRandom.rand();
         }
         if (super.pds != null)

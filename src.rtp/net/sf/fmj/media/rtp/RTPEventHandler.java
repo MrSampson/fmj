@@ -5,19 +5,18 @@ import java.util.*;
 import javax.media.rtp.*;
 import javax.media.rtp.event.*;
 
-import net.sf.fmj.media.*;
 import net.sf.fmj.media.rtp.util.*;
 
 public class RTPEventHandler extends RTPMediaThread
 {
     private RTPSessionMgr sm;
-    private Vector eventQueue;
+    private Vector<RTPEvent> eventQueue;
     private boolean killed;
 
     public RTPEventHandler(RTPSessionMgr sm)
     {
         super("RTPEventHandler");
-        eventQueue = new Vector();
+        eventQueue = new Vector<RTPEvent>();
         killed = false;
         this.sm = sm;
         useControlPriority();
@@ -45,7 +44,7 @@ public class RTPEventHandler extends RTPMediaThread
             }
             if (killed)
                 return;
-            evt = (RTPEvent) eventQueue.elementAt(0);
+            evt = eventQueue.elementAt(0);
             eventQueue.removeElementAt(0);
         }
         processEvent(evt);
@@ -54,7 +53,6 @@ public class RTPEventHandler extends RTPMediaThread
     public synchronized void postEvent(RTPEvent evt)
     {
         eventQueue.addElement(evt);
-        Log.info(String.format("Event was posted: %s", evt.toString()));
         notifyAll();
     }
 

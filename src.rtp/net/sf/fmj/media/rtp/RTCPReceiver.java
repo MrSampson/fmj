@@ -36,14 +36,14 @@ public class RTCPReceiver implements PacketConsumer
             StreamSynch streamsynch)
     {
         this(ssrccache, (new RTCPRawReceiver(datagramsocket,
-                ssrccache.sessionManager.defaultstats, streamsynch)));
+                ssrccache.sm.defaultstats, streamsynch)));
     }
 
     public RTCPReceiver(SSRCCache ssrccache, int i, String s,
             StreamSynch streamsynch) throws UnknownHostException, IOException
     {
         this(ssrccache, (new RTCPRawReceiver(i | 1, s,
-                ssrccache.sessionManager.defaultstats, streamsynch)));
+                ssrccache.sm.defaultstats, streamsynch)));
     }
 
     public RTCPReceiver(SSRCCache ssrccache, PacketSource packetsource)
@@ -71,17 +71,17 @@ public class RTCPReceiver implements PacketConsumer
     public void sendTo(RTCPPacket rtcppacket)
     {
         SSRCInfo ssrcinfo = null;
-        boolean flag = cache.sessionManager.isUnicast();
+        boolean flag = cache.sm.isUnicast();
         if (flag)
             if (!rtcpstarted)
             {
-                cache.sessionManager.startRTCPReports(((UDPPacket) rtcppacket.base).remoteAddress);
+                cache.sm.startRTCPReports(((UDPPacket) rtcppacket.base).remoteAddress);
                 rtcpstarted = true;
-                byte abyte0[] = cache.sessionManager.controladdress.getAddress();
+                byte abyte0[] = cache.sm.controladdress.getAddress();
                 int i = abyte0[3] & 0xff;
                 if ((i & 0xff) == 255)
                 {
-                    cache.sessionManager.addUnicastAddr(cache.sessionManager.controladdress);
+                    cache.sm.addUnicastAddr(cache.sm.controladdress);
                 } else
                 {
                     InetAddress inetaddress = null;
@@ -94,11 +94,11 @@ public class RTCPReceiver implements PacketConsumer
                         flag1 = false;
                     }
                     if (flag1)
-                        cache.sessionManager.addUnicastAddr(inetaddress);
+                        cache.sm.addUnicastAddr(inetaddress);
                 }
-            } else if (!cache.sessionManager
+            } else if (!cache.sm
                     .isSenderDefaultAddr(((UDPPacket) rtcppacket.base).remoteAddress))
-                cache.sessionManager.addUnicastAddr(((UDPPacket) rtcppacket.base).remoteAddress);
+                cache.sm.addUnicastAddr(((UDPPacket) rtcppacket.base).remoteAddress);
         switch (rtcppacket.type)
         {
         default:
@@ -110,8 +110,8 @@ public class RTCPReceiver implements PacketConsumer
             for (int j = 0; j < rtcpcompoundpacket.packets.length; j++)
                 sendTo(rtcpcompoundpacket.packets[j]);
 
-            if (cache.sessionManager.cleaner != null)
-                cache.sessionManager.cleaner.setClean();
+            if (cache.sm.cleaner != null)
+                cache.sm.cleaner.setClean();
             break;
 
         case 200:
@@ -138,11 +138,11 @@ public class RTCPReceiver implements PacketConsumer
                 ActiveReceiveStreamEvent activereceivestreamevent = null;
                 if (ssrcinfo instanceof ReceiveStream)
                     activereceivestreamevent = new ActiveReceiveStreamEvent(
-                            cache.sessionManager, ssrcinfo.sourceInfo,
+                            cache.sm, ssrcinfo.sourceInfo,
                             (ReceiveStream) ssrcinfo);
                 else
                     activereceivestreamevent = new ActiveReceiveStreamEvent(
-                            cache.sessionManager, ssrcinfo.sourceInfo, null);
+                            cache.sm, ssrcinfo.sourceInfo, null);
                 cache.eventhandler.postEvent(activereceivestreamevent);
             }
             ssrcinfo.lastSRpacketcount = rtcpsrpacket.packetcount;
@@ -170,7 +170,7 @@ public class RTCPReceiver implements PacketConsumer
             if (!ssrcinfo.newpartsent && ssrcinfo.sourceInfo != null)
             {
                 NewParticipantEvent newparticipantevent = new NewParticipantEvent(
-                        cache.sessionManager, ssrcinfo.sourceInfo);
+                        cache.sm, ssrcinfo.sourceInfo);
                 cache.eventhandler.postEvent(newparticipantevent);
                 ssrcinfo.newpartsent = true;
             }
@@ -178,11 +178,11 @@ public class RTCPReceiver implements PacketConsumer
             {
                 ssrcinfo.recvstrmap = true;
                 StreamMappedEvent streammappedevent = new StreamMappedEvent(
-                        cache.sessionManager, (ReceiveStream) ssrcinfo, ssrcinfo.sourceInfo);
+                        cache.sm, (ReceiveStream) ssrcinfo, ssrcinfo.sourceInfo);
                 cache.eventhandler.postEvent(streammappedevent);
             }
             SenderReportEvent senderreportevent = new SenderReportEvent(
-                    cache.sessionManager, (SenderReport) ssrcinfo);
+                    cache.sm, (SenderReport) ssrcinfo);
             cache.eventhandler.postEvent(senderreportevent);
             break;
 
@@ -206,11 +206,11 @@ public class RTCPReceiver implements PacketConsumer
                 ActiveReceiveStreamEvent activereceivestreamevent1 = null;
                 if (ssrcinfo instanceof ReceiveStream)
                     activereceivestreamevent1 = new ActiveReceiveStreamEvent(
-                            cache.sessionManager, ssrcinfo.sourceInfo,
+                            cache.sm, ssrcinfo.sourceInfo,
                             (ReceiveStream) ssrcinfo);
                 else
                     activereceivestreamevent1 = new ActiveReceiveStreamEvent(
-                            cache.sessionManager, ssrcinfo.sourceInfo, null);
+                            cache.sm, ssrcinfo.sourceInfo, null);
                 cache.eventhandler.postEvent(activereceivestreamevent1);
             }
             for (int i1 = 0; i1 < rtcprrpacket.reports.length; i1++)
@@ -234,12 +234,12 @@ public class RTCPReceiver implements PacketConsumer
             if (!ssrcinfo.newpartsent && ssrcinfo.sourceInfo != null)
             {
                 NewParticipantEvent newparticipantevent1 = new NewParticipantEvent(
-                        cache.sessionManager, ssrcinfo.sourceInfo);
+                        cache.sm, ssrcinfo.sourceInfo);
                 cache.eventhandler.postEvent(newparticipantevent1);
                 ssrcinfo.newpartsent = true;
             }
             ReceiverReportEvent receiverreportevent = new ReceiverReportEvent(
-                    cache.sessionManager, (ReceiverReport) ssrcinfo);
+                    cache.sm, (ReceiverReport) ssrcinfo);
             cache.eventhandler.postEvent(receiverreportevent);
             break;
 
@@ -273,7 +273,7 @@ public class RTCPReceiver implements PacketConsumer
                     && ssrcinfo.sourceInfo != null)
             {
                 NewParticipantEvent newparticipantevent2 = new NewParticipantEvent(
-                        cache.sessionManager, ssrcinfo.sourceInfo);
+                        cache.sm, ssrcinfo.sourceInfo);
                 cache.eventhandler.postEvent(newparticipantevent2);
                 ssrcinfo.newpartsent = true;
             }
@@ -283,7 +283,7 @@ public class RTCPReceiver implements PacketConsumer
             {
                 ssrcinfo.recvstrmap = true;
                 StreamMappedEvent streammappedevent1 = new StreamMappedEvent(
-                        cache.sessionManager, (ReceiveStream) ssrcinfo, ssrcinfo.sourceInfo);
+                        cache.sm, (ReceiveStream) ssrcinfo, ssrcinfo.sourceInfo);
                 cache.eventhandler.postEvent(streammappedevent1);
             }
             type = 0;
@@ -325,11 +325,11 @@ public class RTCPReceiver implements PacketConsumer
                 ActiveReceiveStreamEvent activereceivestreamevent2 = null;
                 if (ssrcinfo1 instanceof ReceiveStream)
                     activereceivestreamevent2 = new ActiveReceiveStreamEvent(
-                            cache.sessionManager, ssrcinfo1.sourceInfo,
+                            cache.sm, ssrcinfo1.sourceInfo,
                             (ReceiveStream) ssrcinfo1);
                 else
                     activereceivestreamevent2 = new ActiveReceiveStreamEvent(
-                            cache.sessionManager, ssrcinfo1.sourceInfo, null);
+                            cache.sm, ssrcinfo1.sourceInfo, null);
                 cache.eventhandler.postEvent(activereceivestreamevent2);
             }
             ssrcinfo1.byereason = new String(rtcpbyepacket.reason);
@@ -341,11 +341,11 @@ public class RTCPReceiver implements PacketConsumer
                 flag2 = true;
             ByeEvent byeevent = null;
             if (ssrcinfo1 instanceof RecvSSRCInfo)
-                byeevent = new ByeEvent(cache.sessionManager, ssrcinfo1.sourceInfo,
+                byeevent = new ByeEvent(cache.sm, ssrcinfo1.sourceInfo,
                         (ReceiveStream) ssrcinfo1, new String(
                                 rtcpbyepacket.reason), flag2);
             if (ssrcinfo1 instanceof PassiveSSRCInfo)
-                byeevent = new ByeEvent(cache.sessionManager, ssrcinfo1.sourceInfo, null,
+                byeevent = new ByeEvent(cache.sm, ssrcinfo1.sourceInfo, null,
                         new String(rtcpbyepacket.reason), flag2);
             cache.eventhandler.postEvent(byeevent);
             /*
@@ -375,20 +375,20 @@ public class RTCPReceiver implements PacketConsumer
                 ActiveReceiveStreamEvent activereceivestreamevent3 = null;
                 if (ssrcinfo2 instanceof ReceiveStream)
                     activereceivestreamevent3 = new ActiveReceiveStreamEvent(
-                            cache.sessionManager, ssrcinfo2.sourceInfo,
+                            cache.sm, ssrcinfo2.sourceInfo,
                             (ReceiveStream) ssrcinfo2);
                 else
                     activereceivestreamevent3 = new ActiveReceiveStreamEvent(
-                            cache.sessionManager, ssrcinfo2.sourceInfo, null);
+                            cache.sm, ssrcinfo2.sourceInfo, null);
                 cache.eventhandler.postEvent(activereceivestreamevent3);
             }
             ApplicationEvent applicationevent = null;
             if (ssrcinfo2 instanceof RecvSSRCInfo)
-                applicationevent = new ApplicationEvent(cache.sessionManager,
+                applicationevent = new ApplicationEvent(cache.sm,
                         ssrcinfo2.sourceInfo, (ReceiveStream) ssrcinfo2,
                         rtcpapppacket.subtype, null, rtcpapppacket.data);
             if (ssrcinfo2 instanceof PassiveSSRCInfo)
-                applicationevent = new ApplicationEvent(cache.sessionManager,
+                applicationevent = new ApplicationEvent(cache.sm,
                         ssrcinfo2.sourceInfo, null, rtcpapppacket.subtype,
                         null, rtcpapppacket.data);
             cache.eventhandler.postEvent(applicationevent);

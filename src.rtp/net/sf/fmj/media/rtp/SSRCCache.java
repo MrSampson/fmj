@@ -34,7 +34,7 @@ public class SSRCCache
     int avgrtcpsize;
     Hashtable conflicttable;
     SSRCInfo ourssrc;
-    public RTPSessionMgr sessionManager;
+    public RTPSessionMgr sm;
 
     SSRCCache(RTPSessionMgr sm)
     {
@@ -58,7 +58,7 @@ public class SSRCCache
         sourceInfoCache = new RTPSourceInfoCache();
         sourceInfoCache.setMainCache(sourceInfoCache);
         sourceInfoCache.setSSRCCache(this);
-        this.sessionManager = sm;
+        this.sm = sm;
         eventhandler = new RTPEventHandler(sm);
         setclockrates();
     }
@@ -84,7 +84,7 @@ public class SSRCCache
         transstats = sm.transstats;
         sourceInfoCache = sic;
         sic.setSSRCCache(this);
-        this.sessionManager = sm;
+        this.sm = sm;
         eventhandler = new RTPEventHandler(sm);
     }
 
@@ -209,7 +209,7 @@ public class SSRCCache
                             stats.update(4, 1);
                             transstats.remote_coll++;
                             RemoteCollisionEvent evt = new RemoteCollisionEvent(
-                                    sessionManager, info.ssrc);
+                                    sm, info.ssrc);
                             eventhandler.postEvent(evt);
                             SSRCInfo ssrcinfo5 = null;
                             return ssrcinfo5;
@@ -250,7 +250,7 @@ public class SSRCCache
                         return ssrcinfo3;
                     }
                     info = new SendSSRCInfo(this, ssrc);
-                    info.initSource((int) TrueRandom.rand());
+                    info.initsource((int) TrueRandom.rand());
                 }
                 if (mode == 1)
                     info = new RecvSSRCInfo(this, ssrc);
@@ -274,10 +274,10 @@ public class SSRCCache
             {
                 LocalCollisionEvent levt = null;
                 if (info instanceof RecvSSRCInfo)
-                    levt = new LocalCollisionEvent(sessionManager, (ReceiveStream) info,
+                    levt = new LocalCollisionEvent(sm, (ReceiveStream) info,
                             ourssrc.ssrc);
                 else
-                    levt = new LocalCollisionEvent(sessionManager, null, ourssrc.ssrc);
+                    levt = new LocalCollisionEvent(sm, null, ourssrc.ssrc);
                 eventhandler.postEvent(levt);
             }
         }
@@ -353,7 +353,7 @@ public class SSRCCache
 
         for (int i = 96; i < 128; i++)
         {
-            javax.media.Format fmt = sessionManager.formatinfo.get(i);
+            javax.media.Format fmt = sm.formatinfo.get(i);
             if (fmt != null && (fmt instanceof AudioFormat))
                 clockrate[i] = (int) ((AudioFormat) fmt).getSampleRate();
             else

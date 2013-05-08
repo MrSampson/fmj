@@ -45,7 +45,7 @@ public class Buffer
      * @see #FLAG_EOM
      * @see #FLAG_DISCARD
      * @see #FLAG_SILENCE
-     * @see #FLAG_NO_FEC
+     * @see #FLAG_SID
      * @see #FLAG_KEY_FRAME
      * @see #FLAG_NO_DROP
      * @see #FLAG_NO_WAIT
@@ -112,10 +112,10 @@ public class Buffer
     public final static int FLAG_SILENCE = (1 << 2);
 
     /**
-     * Indicates that this <tt>Buffer</tt> should be played as is and
-     * shouldn't be searched for FEC information.
+     * Indicates that this <tt>Buffer</tt> contains only SID (silence
+     * information description) frames.
      */
-    public final static int FLAG_NO_FEC = (1 << 3);
+    public final static int FLAG_SID = (1 << 3);
 
     /**
      * Indicates that this <tt>Buffer</tt> starts with a key frame.

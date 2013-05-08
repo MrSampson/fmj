@@ -84,7 +84,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
     protected Vector sendstreamlistener = null;
     private static final int GET_ALL_PARTICIPANTS = -1;
     boolean encryption = false;
-    SSRCTable dataSourceList = null;
+    SSRCTable dslist = null;
     StreamSynch streamSynch = null;
     FormatInfo formatinfo = null;
     DataSource defaultsource = null;
@@ -153,7 +153,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         streamlistener = new Vector();
         sendstreamlistener = new Vector();
         encryption = false;
-        dataSourceList = new SSRCTable();
+        dslist = new SSRCTable();
         formatinfo = null;
         defaultsource = null;
         defaultstream = null;
@@ -208,7 +208,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         streamlistener = new Vector();
         sendstreamlistener = new Vector();
         encryption = false;
-        dataSourceList = new SSRCTable();
+        dslist = new SSRCTable();
         formatinfo = null;
         defaultsource = null;
         defaultstream = null;
@@ -300,7 +300,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         streamlistener = new Vector();
         sendstreamlistener = new Vector();
         encryption = false;
-        dataSourceList = new SSRCTable();
+        dslist = new SSRCTable();
         formatinfo = null;
         defaultsource = null;
         defaultstream = null;
@@ -356,7 +356,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         {
             return;
         }
-        DataSource datasource = (DataSource) dataSourceList.get(i);
+        DataSource datasource = (DataSource) dslist.get(i);
         if (datasource != null)
         {
             return;
@@ -683,7 +683,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
 
     public void closeSession()
     {
-        if (dataSourceList.isEmpty() || nosockets)
+        if (dslist.isEmpty() || nosockets)
         {
             closeSession("DataSource disconnected");
         }
@@ -754,7 +754,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         }
         RTPSourceStream rtpsourcestream = new RTPSourceStream(datasource);
         ((BufferControlImpl) buffercontrol).addSourceStream(rtpsourcestream);
-        dataSourceList.put(i, datasource);
+        dslist.put(i, datasource);
         datasource.setSSRC(i);
         datasource.setMgr(this);
         return datasource;
@@ -777,7 +777,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         ((BufferControlImpl) buffercontrol).addSourceStream(rtpsourcestream);
         if (rtpmedialocator != null && (int) rtpmedialocator.getSSRC() != 0)
         {
-            dataSourceList.put((int) rtpmedialocator.getSSRC(), datasource);
+            dslist.put((int) rtpmedialocator.getSSRC(), datasource);
             datasource.setSSRC((int) rtpmedialocator.getSSRC());
             datasource.setMgr(this);
         } else
@@ -1133,7 +1133,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
             return defaultsource;
         } else
         {
-            return (DataSource) dataSourceList.get(i);
+            return (DataSource) dslist.get(i);
         }
     }
 
@@ -1905,7 +1905,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
             defaultsourceid = 0;
             bds = false;
         }
-        dataSourceList.removeObj(datasource);
+        dslist.removeObj(datasource);
     }
 
     public void removePeer(SessionAddress sessionaddress)
@@ -2107,7 +2107,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
     {
         bds = true;
         defaultsourceid = i;
-        dataSourceList.put(i, defaultsource);
+        dslist.put(i, defaultsource);
         defaultsource.setSSRC(i);
         defaultsource.setMgr(this);
     }

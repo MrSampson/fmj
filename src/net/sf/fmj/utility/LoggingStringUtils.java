@@ -23,8 +23,8 @@ public final class LoggingStringUtils
             strings.add("FLAG_DISCARD");
         if ((flags & Buffer.FLAG_SILENCE) != 0)
             strings.add("FLAG_SILENCE");
-        if ((flags & Buffer.FLAG_NO_FEC) != 0)
-            strings.add("FLAG_NO_FEC");
+        if ((flags & Buffer.FLAG_SID) != 0)
+            strings.add("FLAG_SID");
         if ((flags & Buffer.FLAG_KEY_FRAME) != 0)
             strings.add("FLAG_KEY_FRAME");
         if ((flags & Buffer.FLAG_NO_WAIT) != 0)
