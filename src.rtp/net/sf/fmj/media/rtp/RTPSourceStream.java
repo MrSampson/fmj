@@ -22,6 +22,7 @@ public class RTPSourceStream
     extends BasicSourceStream
     implements PushBufferStream, Runnable
 {
+	private JitterBufferCharts chart = new JitterBufferCharts();
     private BufferControlImpl bc = null;
 
     /**
@@ -113,7 +114,7 @@ public class RTPSourceStream
          */
         synchronized (q)
         {
-
+        	chart.updateSize(q.getFillCount());
         if (lastSeqRecv - bufferSN > 256L)
         {
             Log.info("Resetting queue, last seq added: " + lastSeqRecv +

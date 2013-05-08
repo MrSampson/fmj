@@ -12,12 +12,14 @@ import net.sf.fmj.media.protocol.rtp.*;
 
 public class JitterBufferCharts
 {
-
     private DataSource datasource;
-
     public JitterBufferCharts(DataSource datasource)
     {
         this.datasource = datasource;
+    }
+    
+    public JitterBufferCharts()
+    {
     }
 
     public static Chart2D chart            = null;
@@ -25,12 +27,11 @@ public class JitterBufferCharts
     //    private ITrace2D intrace = null;
     //    private ITrace2D outtrace = null;
     private ITrace2D      sizetrace        = null;
-    private Thread        videoThread;
 
     //    private long lastArrivalTimeNanos = System.nanoTime();
     //    private long lastDepartureTimeNanos = System.nanoTime();
 
-    boolean shouldChart()
+    private boolean shouldChart()
     {
         if (sizetrace != null)
         {
@@ -46,8 +47,8 @@ public class JitterBufferCharts
             //          outtrace.setColor(Color.green);
 
             sizetrace = new Trace2DLtd(datapointsToKeep,
-                                       String.valueOf(datasource.getSSRC() +
-                                                      " Size"));
+//                                       String.valueOf(datasource.getSSRC() +
+                                                      "JB Size");
             sizetrace.setColor(Color.black);
 
             //          chart.addTrace(intrace);
@@ -62,7 +63,10 @@ public class JitterBufferCharts
 
     public void updateSize(int size)
     {
+    	if (shouldChart())
+    	{
          sizetrace.addPoint(System.nanoTime(), size);
+    	}
     }
 
     //  if (shouldChart())
