@@ -1,5 +1,6 @@
 package net.sf.fmj.media.rtp;
 
+import java.io.IOException;
 import java.net.*;
 
 import javax.media.*;
@@ -79,7 +80,7 @@ public class RTPReceiver extends PacketFilter
     {
         return null;
     }
-
+    
     /**
      * Handle an RTP packet.
      *
@@ -90,7 +91,7 @@ public class RTPReceiver extends PacketFilter
     {
         try
         {
-            handleSilencePacket(rtpPacket);
+            handleUnsupportedPayloadType(rtpPacket);
             checkNetworkAddress(rtpPacket);
             SSRCInfo ssrcinfo = getSsrcInfo(rtpPacket);
             processCsrcs(rtpPacket);
@@ -130,10 +131,11 @@ public class RTPReceiver extends PacketFilter
         return rtpPacket;
     }
 
-    private void handleSilencePacket(RTPPacket rtpPacket) throws PartiallyProcessedPacketException
+    private void handleUnsupportedPayloadType(RTPPacket rtpPacket) throws PartiallyProcessedPacketException
     {
-        if (rtpPacket.payloadType == 13)
+        if (rtpPacket.payloadType == 13 || rtpPacket.payloadType == 18)
         {
+        	//Drop CN and g729 packets without even looking at them (or logging)
             throw new PartiallyProcessedPacketException(null);
         }
     }
@@ -316,45 +318,38 @@ public class RTPReceiver extends PacketFilter
         if (ssrcinfo.lastPayloadType != -1
                 && ssrcinfo.lastPayloadType != rtpPacket.payloadType)
         {
-//            ssrcinfo.currentformat = null;
-//
-//            if (ssrcinfo.dsource != null)
-//            {
-//                RTPControlImpl rtpcontrolimpl = (RTPControlImpl) ssrcinfo.dsource
-//                        .getControl(controlstr);
-//                if (rtpcontrolimpl != null)
-//                {
-//                    rtpcontrolimpl.currentformat = null;
-//                    rtpcontrolimpl.payload = -1;
-//                }
-//
-//                try
-//                {
-//                    Log.warning("Stopping stream because of payload type "
-//                            + "mismatch: expecting pt="
-//                            + ssrcinfo.lastPayloadType + ", got pt="
-//                            + rtppacket.payloadType);
-//                    ssrcinfo.dsource.stop(); //TODO TED - Do we really want to stop the stream?
-//                } catch (IOException ioexception)
-//                {
-//                    System.err.println("Stopping DataSource after PCE "
-//                            + ioexception.getMessage());
-//                }
-//            }
-//
-//            ssrcinfo.lastPayloadType = rtppacket.payloadType;
-//
-//            RemotePayloadChangeEvent remotepayloadchangeevent = new RemotePayloadChangeEvent(
-//                    cache.sm, (ReceiveStream) ssrcinfo,
-//                    ssrcinfo.lastPayloadType, rtppacket.payloadType);
-//            cache.eventhandler.postEvent(remotepayloadchangeevent);
+            ssrcinfo.currentformat = null;
 
-            Log.warning("Payload type changed midstream "
-                      + "expecting pt="
-                      + ssrcinfo.lastPayloadType + ", got pt="
-                      + rtpPacket.payloadType);
+            if (ssrcinfo.dsource != null)
+            {
+                RTPControlImpl rtpcontrolimpl = (RTPControlImpl) ssrcinfo.dsource
+                        .getControl(controlName);
+                if (rtpcontrolimpl != null)
+                {
+                    rtpcontrolimpl.currentformat = null;
+                    rtpcontrolimpl.payload = -1;
+                }
 
+                try
+                {
+                    Log.warning("Stopping stream because of payload type "
+                            + "mismatch: expecting pt="
+                            + ssrcinfo.lastPayloadType + ", got pt="
+                            + rtpPacket.payloadType);
+                    ssrcinfo.dsource.stop();
+                } catch (IOException ioexception)
+                {
+                    System.err.println("Stopping DataSource after PCE "
+                            + ioexception.getMessage());
+                }
+            }
 
+            ssrcinfo.lastPayloadType = rtpPacket.payloadType;
+
+            RemotePayloadChangeEvent remotepayloadchangeevent = new RemotePayloadChangeEvent(
+                    cache.sm, (ReceiveStream) ssrcinfo,
+                    ssrcinfo.lastPayloadType, rtpPacket.payloadType);
+            cache.eventhandler.postEvent(remotepayloadchangeevent);
         }
     }
 
