@@ -74,7 +74,7 @@ public class RTPSourceStream
     {
         datasource.setSourceStream(this);
 
-        q = new JitterBuffer(4);
+        q = new JitterBuffer(8);
         stats = new JitterBufferStats(this);
 
         /*
@@ -101,6 +101,11 @@ public class RTPSourceStream
      */
     public void add(Buffer buffer, boolean flag, RTPRawReceiver rtprawreceiver)
     {
+    	if (JitterBufferTester.shouldReset())
+    	{
+    		reset();
+    	}
+    	
         if (!started && !bufferWhenStopped)
             return;
 

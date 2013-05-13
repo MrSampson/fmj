@@ -28,6 +28,16 @@ public class Charting
 		return (chart != null);
 	}
 	
+	public synchronized static void createChart(JFrame chartFrame) {
+        chart = new Chart2D();
+        chartFrame.getContentPane().add(chart);
+	}
+	
+	public synchronized static void destroyChart() {
+        chart = null;
+        initPerformed = false;
+	}
+	
 	private synchronized static boolean shouldChart()
 	{
 		boolean retVal = false;
@@ -38,13 +48,7 @@ public class Charting
 		else if (chartingEnabled())
 		{
 			initializeTraces();
-			initPerformed = true;
 			return true;
-		}
-		else if (!chartingEnabled() && initPerformed)
-		{
-			//Charting has been turned off - uninit
-			initPerformed = false;
 		}
 
 		return retVal;
@@ -76,6 +80,7 @@ public class Charting
 		jbSizeInPacketsTrace= new TraceDescription(400, "Jitter Buffer Size", Color.BLACK, chart.getAxisX(), yAxisMs);
 		jbCapacityInPacketsTrace= new TraceDescription(400, "Jitter Buffer Capacity", Color.DARK_GRAY, chart.getAxisX(), yAxisMs);
 		
+		traces.clear();
 		traces.add(wasapiDeltaTrace);
 		traces.add(wasapiBytesWrittenTrace);
 		traces.add(jbSizeInPacketsTrace);
@@ -85,6 +90,8 @@ public class Charting
         {
         	chart.addTrace(aTrace.trace, aTrace.xAxis, aTrace.yAxis);
         }
+        
+        initPerformed = true;
 	}
 
 	public static void wroteToWasapi(int bytesWritten)
@@ -107,10 +114,5 @@ public class Charting
 			jbSizeInPacketsTrace.trace.addPoint(timestamp, jbSize);
 			jbCapacityInPacketsTrace.trace.addPoint(timestamp, capacity);
 		}
-	}
-
-	public static void createChart(JFrame chartFrame) {
-        chart = new Chart2D();
-        chartFrame.getContentPane().add(chart);
 	}
 }

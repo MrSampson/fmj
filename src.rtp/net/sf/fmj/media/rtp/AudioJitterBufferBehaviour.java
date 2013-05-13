@@ -425,6 +425,8 @@ class AudioJitterBufferBehaviour
     @Override
     public void read(Buffer buffer)
     {
+    	skipFec = JitterBufferTester.dropPacketIfRequired(this, skipFec);
+    	
         super.read(buffer);
 
         if (!buffer.isDiscard() && skipFec)
