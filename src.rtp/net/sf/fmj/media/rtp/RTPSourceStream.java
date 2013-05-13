@@ -9,6 +9,7 @@ import net.sf.fmj.media.*;
 import net.sf.fmj.media.protocol.*;
 import net.sf.fmj.media.protocol.rtp.DataSource;
 import net.sf.fmj.media.rtp.util.*;
+import net.sf.fmj.utility.charting.Charting;
 
 /**
  * Implements a <tt>PushBufferStream</tt> which represents a stream of RTP
@@ -22,7 +23,6 @@ public class RTPSourceStream
     extends BasicSourceStream
     implements PushBufferStream, Runnable
 {
-	private JitterBufferCharts chart = new JitterBufferCharts();
     private BufferControlImpl bc = null;
 
     /**
@@ -114,7 +114,7 @@ public class RTPSourceStream
          */
         synchronized (q)
         {
-        	chart.updateSize(q.getFillCount());
+        	Charting.jbQueueSizeChanged(q.getFillCount(), q.getCapacity());
         if (lastSeqRecv - bufferSN > 256L)
         {
             Log.info("Resetting queue, last seq added: " + lastSeqRecv +
@@ -336,6 +336,7 @@ public class RTPSourceStream
             {
                 if (!buffer.isDiscard())
                 {
+                	Charting.jbQueueSizeChanged(q.getFillCount(), q.getCapacity());
                     hasRead = true;
                     q.notifyAll();
                 }
@@ -472,6 +473,9 @@ public class RTPSourceStream
         if (this.format != format)
         {
             this.format = format;
+            
+//            this.format = new AudioFormat("ULAW/rtp", 8000, 8, 1);
+            System.out.println(this.format);
 
             /*
              * The jitter buffer/RTP packet queue associated with
