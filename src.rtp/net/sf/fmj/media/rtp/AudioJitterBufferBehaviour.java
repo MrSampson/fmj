@@ -173,11 +173,11 @@ class AudioJitterBufferBehaviour
         AJB_MAX_SIZE
             = com.sun.media.util.Registry.getInt(
                     "adaptive_jitter_buffer_MAX_SIZE",
-                    16);
+                    30);
         AJB_MIN_SIZE
             = com.sun.media.util.Registry.getInt(
                     "adaptive_jitter_buffer_MIN_SIZE",
-                    4);
+                    8);
         AJB_SHRINK_DECREMENT
             = com.sun.media.util.Registry.getInt(
                     "adaptive_jitter_buffer_SHRINK_DECREMENT",
