@@ -8,7 +8,7 @@
     
 	<target name="build-jitsi" description="compile java source for jitsi">
         <mkdir dir="${javac.out}"/>
-	<javac debug="true" optimize="true" classpath="lib/jchart2d-3.2.2.jar" destdir="${javac.out}">
+	<javac debug="true" optimize="true" classpath="lib/jchart2d-3.2.2.jar;lib/commons-math3-3.2.jar" destdir="${javac.out}">
         	<exclude name="**/RTPSourceStreamTest.java"/>
         	<exclude name="**/PlayGSM.java"/>
             <src path="${src}"/>

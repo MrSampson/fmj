@@ -1,11 +1,14 @@
 package net.sf.fmj.media.rtp;
 
-import java.awt.*;
+import java.awt.Component;
 
-import javax.media.*;
-import javax.media.control.*;
+import javax.media.Buffer;
+import javax.media.control.PacketQueueControl;
 
-import net.sf.fmj.media.*;
+import net.sf.fmj.media.Log;
+
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
+import org.apache.commons.math3.stat.descriptive.SynchronizedSummaryStatistics;
 
 /**
  * Implements {@link PacketQueueControl} for {@link RTPSourceStream} and the
@@ -15,7 +18,7 @@ import net.sf.fmj.media.*;
  * @author Lyubomir Marinov
  * @author Tom Denham
  */
-class JitterBufferStats
+public class JitterBufferStats
     implements PacketQueueControl
 {
     /**
@@ -65,6 +68,9 @@ class JitterBufferStats
 
     private int nbReset;
 
+    private SummaryStatistics jiterBufferCapacity = new SynchronizedSummaryStatistics();
+    private SummaryStatistics jiterBufferSize     = new SynchronizedSummaryStatistics();
+    
     /**
      * An average approximation of the size in bytes of an RTP packet.
      */
@@ -84,7 +90,7 @@ class JitterBufferStats
      * @param stream the <tt>RTPSourceStream</tt> for which the new instance is
      * to implement {@link PacketQueueControl}
      */
-    JitterBufferStats(RTPSourceStream stream)
+    public JitterBufferStats(RTPSourceStream stream)
     {
         this.stream = stream;
     }
@@ -336,4 +342,50 @@ class JitterBufferStats
                 ? bufferLength
                 : ((sizePerPacket + bufferLength) / 2);
     }
+
+    public void updateSizeAndCapacity(int size, int capacity)
+    {
+    	jiterBufferCapacity.addValue(capacity);
+    	jiterBufferSize.addValue(size);
+    }
+    
+	@Override
+	public int getMinCapacity() {
+		return (int) jiterBufferCapacity.getMin();
+	}
+
+	@Override
+	public int getMaxCapacity() {
+		return (int) jiterBufferCapacity.getMax();
+	}
+
+	@Override
+	public double getAverageCapacity() {
+		return jiterBufferCapacity.getMean();
+	}
+	
+	@Override
+	public double getStandardDeviationCapacity() {
+		return jiterBufferCapacity.getStandardDeviation();
+	}
+
+	@Override
+	public int getMinSize() {
+		return (int) jiterBufferSize.getMin();
+	}
+
+	@Override
+	public int getMaxSize() {
+		return (int) jiterBufferSize.getMax();
+	}
+
+	@Override
+	public double getAverageSize() {
+		return jiterBufferSize.getMean();
+	}
+	
+	@Override
+	public double getStandardDeviationSize() {
+		return jiterBufferSize.getStandardDeviation();
+	}
 }

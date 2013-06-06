@@ -342,6 +342,7 @@ public class RTPSourceStream
                 if (!buffer.isDiscard())
                 {
                 	Charting.jbQueueSizeChanged(q.getFillCount(), q.getCapacity());
+                	stats.updateSizeAndCapacity(q.getFillCount(), q.getCapacity());
                     hasRead = true;
                     q.notifyAll();
                 }
