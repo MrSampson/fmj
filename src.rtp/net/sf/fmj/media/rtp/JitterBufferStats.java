@@ -1,14 +1,13 @@
 package net.sf.fmj.media.rtp;
 
-import java.awt.Component;
+import java.awt.*;
 
-import javax.media.Buffer;
-import javax.media.control.PacketQueueControl;
+import javax.media.*;
+import javax.media.control.*;
 
-import net.sf.fmj.media.Log;
+import net.sf.fmj.media.*;
 
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
-import org.apache.commons.math3.stat.descriptive.SynchronizedSummaryStatistics;
+import org.apache.commons.math3.stat.descriptive.*;
 
 /**
  * Implements {@link PacketQueueControl} for {@link RTPSourceStream} and the
@@ -112,7 +111,6 @@ public class JitterBufferStats
      */
     public int getCurrentDelayMs()
     {
-        // TODO Auto-generated method stub
         return (int) (getCurrentDelayPackets() * 20);
     }
 
@@ -345,47 +343,55 @@ public class JitterBufferStats
 
     public void updateSizeAndCapacity(int size, int capacity)
     {
-    	jiterBufferCapacity.addValue(capacity);
-    	jiterBufferSize.addValue(size);
+        jiterBufferCapacity.addValue(capacity);
+        jiterBufferSize.addValue(size);
     }
     
-	@Override
-	public int getMinCapacity() {
-		return (int) jiterBufferCapacity.getMin();
-	}
+    @Override
+    public int getMinCapacity()
+    {
+        return (int) jiterBufferCapacity.getMin();
+    }
 
-	@Override
-	public int getMaxCapacity() {
-		return (int) jiterBufferCapacity.getMax();
-	}
+    @Override
+    public int getMaxCapacity()
+    {
+        return (int) jiterBufferCapacity.getMax();
+    }
 
-	@Override
-	public double getAverageCapacity() {
-		return jiterBufferCapacity.getMean();
-	}
-	
-	@Override
-	public double getStandardDeviationCapacity() {
-		return jiterBufferCapacity.getStandardDeviation();
-	}
+    @Override
+    public double getAverageCapacity()
+    {
+        return jiterBufferCapacity.getMean();
+    }
 
-	@Override
-	public int getMinSize() {
-		return (int) jiterBufferSize.getMin();
-	}
+    @Override
+    public double getStandardDeviationCapacity()
+    {
+        return jiterBufferCapacity.getStandardDeviation();
+    }
 
-	@Override
-	public int getMaxSize() {
-		return (int) jiterBufferSize.getMax();
-	}
+    @Override
+    public int getMinSize()
+    {
+        return (int) jiterBufferSize.getMin();
+    }
 
-	@Override
-	public double getAverageSize() {
-		return jiterBufferSize.getMean();
-	}
-	
-	@Override
-	public double getStandardDeviationSize() {
-		return jiterBufferSize.getStandardDeviation();
-	}
+    @Override
+    public int getMaxSize()
+    {
+        return (int) jiterBufferSize.getMax();
+    }
+
+    @Override
+    public double getAverageSize()
+    {
+        return jiterBufferSize.getMean();
+    }
+
+    @Override
+    public double getStandardDeviationSize()
+    {
+        return jiterBufferSize.getStandardDeviation();
+    }
 }
