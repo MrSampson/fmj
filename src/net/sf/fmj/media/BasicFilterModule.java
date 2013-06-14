@@ -168,36 +168,39 @@ public class BasicFilterModule extends BasicModule
                         && !incomingFormat.equals(ic.getFormat())
                         && !inputBuffer.isDiscard())
                 {
-                    // The format is changed mid-stream!
-
-                    if (writePendingFlag)
-                    {
-                        // Discard the pending output buffer.
-                        storedOutputBuffer.setDiscard(true);
-                        oc.writeReport();
-                        writePendingFlag = false;
-                    }
-
-                    // Attempt to re-initialize the plugin codec.
-                    // Bail out if failed.
-                    if (!reinitCodec(inputBuffer.getFormat()))
-                    {
-                        // Failed.
-                        inputBuffer.setDiscard(true);
-                        ic.readReport();
-                        failed = true;
-                        // Just signal an internal error for now.
-                        if (moduleListener != null)
-                            moduleListener.formatChangedFailure(this,
-                                    ic.getFormat(), inputBuffer.getFormat());
-                        return;
-                    }
-
-                    Format oldFormat = ic.getFormat();
-                    ic.setFormat(inputBuffer.getFormat());
-                    if (moduleListener != null)
-                        moduleListener.formatChanged(this, oldFormat,
-                                inputBuffer.getFormat());
+                    Log.error("We hit some code that I've commented out");
+                    inputBuffer.setDiscard(true);
+//                    // The format is changed mid-stream!
+//
+//                    if (writePendingFlag)
+//                    {
+//                        // Discard the pending output buffer.
+//                        storedOutputBuffer.setDiscard(true);
+//                        oc.writeReport();
+//                        writePendingFlag = false;
+//                    }
+//
+//                    // Attempt to re-initialize the plugin codec.
+//                    // Bail out if failed.
+//                    if (!reinitCodec(inputBuffer.getFormat()))
+//                    {
+//                        // Failed.
+//                        Log.error("Failed to reinit codec");
+//                        inputBuffer.setDiscard(true);
+//                        ic.readReport();
+//                        failed = true;
+//                        // Just signal an internal error for now.
+//                        if (moduleListener != null)
+//                            moduleListener.formatChangedFailure(this,
+//                                    ic.getFormat(), inputBuffer.getFormat());
+//                        return;
+//                    }
+//
+//                    Format oldFormat = ic.getFormat();
+//                    ic.setFormat(inputBuffer.getFormat());
+//                    if (moduleListener != null)
+//                        moduleListener.formatChanged(this, oldFormat,
+//                                inputBuffer.getFormat());
                 }
 
                 // The marker flag needs to be handle more delicately.
@@ -293,7 +296,9 @@ public class BasicFilterModule extends BasicModule
 
             } catch (Throwable e)
             {
+                Log.warning("Hit error processing a buffer " + inputBuffer.getSequenceNumber());
                 Log.dumpStack(e);
+                
                 if (moduleListener != null)
                     moduleListener.internalErrorOccurred(this);
             }
@@ -409,14 +414,17 @@ public class BasicFilterModule extends BasicModule
      */
     protected boolean reinitCodec(Format input)
     {
+        Log.info("Reinit codec for format " + input.toString());
         // Query the existing plugin to see if it supports the new input.
         if (codec != null)
         {
             if (codec.setInputFormat(input) != null)
             {
                 // Fine, the existing codec still works.
+                Log.info("Existing codec works");
                 return true;
             }
+            
             // close the previous codec.
             codec.close();
             codec = null;
@@ -428,6 +436,7 @@ public class BasicFilterModule extends BasicModule
             return false;
 
         setCodec(c);
+        Log.info("Setting new codec " + c.getName());
         return true;
     }
 
@@ -446,7 +455,7 @@ public class BasicFilterModule extends BasicModule
      */
     public boolean setCodec(String codec)
     {
-        return true;
+        throw new UnsupportedOperationException();
     }
 
     @Override
