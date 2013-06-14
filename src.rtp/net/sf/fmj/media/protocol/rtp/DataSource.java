@@ -6,6 +6,7 @@ import javax.media.*;
 import javax.media.protocol.*;
 import javax.media.rtp.*;
 
+import net.sf.fmj.media.*;
 import net.sf.fmj.media.protocol.*;
 import net.sf.fmj.media.rtp.*;
 
@@ -44,6 +45,7 @@ public class DataSource extends BasicPushBufferDataSource implements
 
     public DataSource()
     {
+        Log.objectCreated(this, "RTP DataSource");
         srcStreams = new RTPSourceStream[1];
         rtpcontrol = new MyRTPControl();
         // setContentType(ContentDescriptor.RAW);
@@ -66,6 +68,7 @@ public class DataSource extends BasicPushBufferDataSource implements
         /*
          * if (mgr != null){ mgr.startSession(); }
          */
+        Log.annotate(this, "connect");
         if (srcStreams != null)
         {
             for (int i = 0; i < srcStreams.length; i++)
@@ -87,6 +90,8 @@ public class DataSource extends BasicPushBufferDataSource implements
     @Override
     public void disconnect()
     {
+        Log.annotate(this, "disconnect");
+        
         // once we have disconnected, set boolean to false
         // If this datasource was created by using the RTPAPI and not
         // via Manager, we dont want to disconnect this source i.e. we
@@ -112,6 +117,7 @@ public class DataSource extends BasicPushBufferDataSource implements
      */
     public void flush()
     {
+        Log.annotate(this, "flush");
         srcStreams[0].reset();
     }
 
@@ -259,6 +265,7 @@ public class DataSource extends BasicPushBufferDataSource implements
     public void start() throws IOException
     {
         super.start();
+        Log.annotate(this, "start");
         if (childsrc != null)
             childsrc.start();
         if (srcStreams != null)
@@ -276,6 +283,7 @@ public class DataSource extends BasicPushBufferDataSource implements
     public void stop() throws IOException
     {
         super.stop();
+        Log.annotate(this, "stop");
         // stop your child source as well
         if (childsrc != null)
             childsrc.stop();

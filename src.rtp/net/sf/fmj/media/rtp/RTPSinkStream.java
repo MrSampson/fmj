@@ -5,11 +5,11 @@ import javax.media.format.*;
 import javax.media.protocol.*;
 import javax.media.rtp.event.*;
 
+import net.sf.fmj.media.*;
 import net.sf.fmj.media.rtp.util.*;
 
 public class RTPSinkStream implements BufferTransferHandler
 {
-    private RTPMediaThread thread;
     Buffer current;
     boolean started;
     Object startReq;
@@ -30,7 +30,7 @@ public class RTPSinkStream implements BufferTransferHandler
 
     public RTPSinkStream()
     {
-        thread = null;
+        Log.objectCreated(this, "RTPSinkStream");
         current = new Buffer();
         started = false;
         startReq = new Integer(0);
@@ -66,6 +66,7 @@ public class RTPSinkStream implements BufferTransferHandler
     {
         if (started)
             return;
+        Log.annotate(this, "start");
         started = true;
         synchronized (startReq)
         {
@@ -73,12 +74,9 @@ public class RTPSinkStream implements BufferTransferHandler
         }
     }
 
-    public void startStream()
-    {
-    }
-
     public void stop()
     {
+        Log.annotate(this, "stop");
         started = false;
         startPT = -1L;
         synchronized (startReq)

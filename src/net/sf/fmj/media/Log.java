@@ -1,6 +1,9 @@
 package net.sf.fmj.media;
 
+import java.util.*;
 import java.util.logging.*;
+
+import net.sf.fmj.media.protocol.rtp.*;
 
 /**
  * A public static class to generate and write to fmj.log.
@@ -9,6 +12,8 @@ public class Log
 {
     public static boolean isEnabled = false; /* The default JMF value is false. */
     private static int indent = 0;
+    
+    static Set<Integer> seenObjects = new HashSet<Integer>();
 
     /**
      * The Logger instance to be used.
@@ -46,10 +51,16 @@ public class Log
 
     public static synchronized void dumpStack(Throwable e)
     {
-        if (isEnabled && logger.isLoggable(Level.FINE))
+        if (isEnabled && logger.isLoggable(Level.INFO))
         {
+            StringBuffer buf = new StringBuffer(e.toString() + "\n");
             for(StackTraceElement s : e.getStackTrace())
-                logger.fine(s.toString());
+            {
+                buf.append(s.toString());
+                buf.append("\n");
+            }
+            
+            logger.info(buf.toString());
         }
     }
 
@@ -129,5 +140,36 @@ public class Log
         if (java != null)
             comment("Java VM: " + java + ", " + jver);
         write("");
+    }
+
+    public static void objectCreated(Object object,
+            String description)
+    {
+        seenObjects.add(object.hashCode());
+       
+        if (isEnabled && logger.isLoggable(Level.FINE))
+            logger.fine("CREATE " + object.hashCode() + " " + description);
+    }
+
+    public static void createLink(Object source, Object destination, String description)
+    {
+        if (source != null && ! seenObjects.contains(source.hashCode()))
+        {
+            logger.fine("LINK missing CREATE for source " + source.toString());
+        }
+        
+        if (destination != null && ! seenObjects.contains(destination.hashCode()))
+        {
+            logger.fine("LINK missing CREATE for destination " + destination.toString());
+        }
+        
+        if (isEnabled && logger.isLoggable(Level.FINE))
+            logger.fine("LINK " + ((source == null) ? "null" :source.hashCode()) + " " + ((destination == null) ? "null" : destination.hashCode()) + " " + description);
+    }
+
+    public static void annotate(Object source, String description)
+    {
+        if (isEnabled && logger.isLoggable(Level.FINE))
+            logger.fine("ANNOTATE " + source.hashCode() + " " + description);
     }
 }

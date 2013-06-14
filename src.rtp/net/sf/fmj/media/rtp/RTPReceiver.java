@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.*;
 
 import javax.media.*;
+import javax.media.protocol.*;
 import javax.media.rtp.*;
 import javax.media.rtp.event.*;
 
@@ -53,6 +54,8 @@ public class RTPReceiver extends PacketFilter
         cache = ssrccache;
         this.rtpdemultiplexer = rtpdemultiplexer;
         setConsumer(null);
+        Log.objectCreated(this, "RTPReciever");
+        Log.createLink(this, rtpdemultiplexer, "RTPReciever uses RTPDemux");
     }
 
     @Override
@@ -218,11 +221,11 @@ public class RTPReceiver extends PacketFilter
     {
         if (!ssrcinfo.streamconnect)
         {
-            DataSource datasource = (DataSource) cache.sm.dslist.get(ssrcinfo.ssrc);
+            net.sf.fmj.media.protocol.rtp.DataSource datasource = (net.sf.fmj.media.protocol.rtp.DataSource) cache.sm.dslist.get(ssrcinfo.ssrc);
 
             if (datasource == null)
             {
-                DataSource dataSource = cache.sm.getDataSource(null);
+                net.sf.fmj.media.protocol.rtp.DataSource dataSource = cache.sm.getDataSource(null);
                 if (dataSource == null)
                 {
                     datasource = cache.sm.createNewDS(null);
@@ -332,14 +335,23 @@ public class RTPReceiver extends PacketFilter
 
                 try
                 {
-                    Log.warning("Stopping stream because of payload type "
+                    StringBuffer buf = new StringBuffer("[");
+                    for (PushBufferStream aStream : ssrcinfo.dsource.getStreams())
+                    {
+                        buf.append(aStream.hashCode());
+                        buf.append(" ");
+                    }
+
+                    buf.append("]");
+                    
+                    Log.warning("Stopping datasource " + ssrcinfo.dsource.hashCode() + " (used by stream(s) "  + buf.toString() + ")because of payload type "
                             + "mismatch: expecting pt="
                             + ssrcinfo.lastPayloadType + ", got pt="
                             + rtpPacket.payloadType);
                     ssrcinfo.dsource.stop();
                 } catch (IOException ioexception)
                 {
-                    System.err.println("Stopping DataSource after PCE "
+                    Log.warning("Problem stopping DataSource after payload change "
                             + ioexception.getMessage());
                 }
             }

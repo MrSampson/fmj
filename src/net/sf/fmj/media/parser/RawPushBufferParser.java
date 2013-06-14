@@ -35,6 +35,8 @@ public class RawPushBufferParser extends RawStreamParser
         public FrameTrack(Demultiplexer parser, PushBufferStream pbs,
                 int numOfBufs)
         {
+            Log.objectCreated(this, "FrameTrack");
+            Log.createLink(this, pbs, "FrameTrack uses PBS");
             this.pbs = pbs;
             format = pbs.getFormat();
 

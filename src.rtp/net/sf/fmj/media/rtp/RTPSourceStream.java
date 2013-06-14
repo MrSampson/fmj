@@ -72,6 +72,8 @@ public class RTPSourceStream
 
     public RTPSourceStream(DataSource datasource)
     {
+        Log.objectCreated(this, "RTPSourceStream");
+        Log.createLink(this, datasource, "RTPSourceStream uses datasource");
         datasource.setSourceStream(this);
 
         q = new JitterBuffer(8);
@@ -204,6 +206,7 @@ public class RTPSourceStream
     {
         if (killed)
             return;
+        Log.annotate(this, "close");
         stats.printStats();
         stop();
         killed = true;
@@ -222,6 +225,7 @@ public class RTPSourceStream
 
     public void connect()
     {
+        Log.annotate(this, "connect");
         killed = false;
         createThread();
     }
@@ -480,8 +484,7 @@ public class RTPSourceStream
         {
             this.format = format;
             
-//            this.format = new AudioFormat("ULAW/rtp", 8000, 8, 1);
-            System.out.println(this.format);
+            Log.annotate(this, "Setting format " + format.toString());
 
             /*
              * The jitter buffer/RTP packet queue associated with
@@ -501,12 +504,13 @@ public class RTPSourceStream
 
     public void setTransferHandler(BufferTransferHandler transferHandler)
     {
+        Log.createLink(this, transferHandler, "RTPSourceStream uses BufferTransferHandler");
         this.transferHandler = transferHandler;
     }
 
     public void start()
     {
-        Log.info("Starting RTPSourceStream.");
+        Log.annotate(this, "start");
         synchronized (startSyncRoot)
         {
             started = true;
@@ -520,7 +524,8 @@ public class RTPSourceStream
 
     public void stop()
     {
-        Log.info("Stopping RTPSourceStream.");
+        Log.annotate(this, "stop");
+        
         synchronized (startSyncRoot)
         {
             started = false;

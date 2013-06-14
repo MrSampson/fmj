@@ -1114,7 +1114,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
      */
     protected boolean doRealize1()
     {
-        Log.comment("Building flow graph for: " + dsource.getLocator() + "\n");
+        Log.comment("Building flow graph for locator: " + dsource.getLocator());
 
         realizeTime = System.currentTimeMillis();
 
@@ -1127,7 +1127,10 @@ public class PlaybackEngine extends BasicController implements ModuleListener
         {
             // Skip the track if its disabled
             if (!trackControls[i].isEnabled())
+            {
+                Log.warning(String.format("Skipping track %s as it's disabled", i));
                 continue;
+            }
 
             Log.setIndent(0);
             Log.comment("Building Track: " + i);

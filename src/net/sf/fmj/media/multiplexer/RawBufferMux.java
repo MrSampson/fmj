@@ -111,6 +111,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
         public RawBufferSourceStream(Format fmt)
         {
             super();
+            Log.objectCreated(this, "RawBufferSourceStream for format " + fmt);
             contentDescriptor = contentDesc;
             format = fmt;
             bufferQ = new CircularBuffer(5);
@@ -133,6 +134,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
             {
                 try
                 {
+                    Log.annotate(this, "close");
                     // Reset the bufferQ.
                     reset();
                     synchronized (startReq)
@@ -144,7 +146,6 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
                 {
                 }
             }
-            Log.info("Closing RawBufferMux " + this.hashCode());
         }
 
         public Format getFormat()
@@ -383,7 +384,6 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
 
                 } catch (InterruptedException e)
                 {
-                    System.err.println("Thread " + e.getMessage());
                     return;
                 }
             }
@@ -392,6 +392,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
 
         public void setTransferHandler(BufferTransferHandler handler)
         {
+            Log.createLink(this, handler, "RawBufferMux uses BufferTransferHandler");
             this.handler = handler;
         }
 
@@ -402,6 +403,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
                 if (started)
                     return;
                 started = true;
+                Log.annotate(this, "start");
                 startReq.notifyAll();
             }
             synchronized (bufferQ)
@@ -419,6 +421,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
         {
             synchronized (startReq)
             {
+                Log.annotate(this, "stop");
                 started = false;
             }
             synchronized (bufferQ)
@@ -533,6 +536,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
 
     public RawBufferMux()
     {
+        Log.objectCreated(this, "RawBufferMux");
         supported = new ContentDescriptor[1];
         supported[0] = new ContentDescriptor(ContentDescriptor.RAW);
         timeBase = new RawMuxTimeBase();

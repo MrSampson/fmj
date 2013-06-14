@@ -919,7 +919,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
             }
 
         }
-        ((SSRCInfo) (obj)).sinkstream.startStream();
+        
         NewSendStreamEvent newsendstreamevent = new NewSendStreamEvent(this,
                 obj);
         cache.eventhandler.postEvent(newsendstreamevent);

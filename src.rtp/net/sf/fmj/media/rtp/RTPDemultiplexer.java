@@ -2,11 +2,17 @@ package net.sf.fmj.media.rtp;
 
 import javax.media.*;
 
+import net.sf.fmj.media.*;
 import net.sf.fmj.media.rtp.util.*;
 
+/**
+ *  Used by the RTPReceiver to convert an RTPPacket into a buffer.
+ *  
+ *  This class uses a single buffer which is added to a DataSource from the
+ * SSRCInfo passed in with the RTPPacket.
+ */
 public class RTPDemultiplexer
 {
-    private SSRCCache cache;
     private RTPRawReceiver rtpr;
     private Buffer buffer;
     private StreamSynch streamSynch;
@@ -14,27 +20,18 @@ public class RTPDemultiplexer
     public RTPDemultiplexer(SSRCCache c, RTPRawReceiver r,
             StreamSynch streamSynch)
     {
-        cache = c;
+        Log.objectCreated(this, "RTPDemultiplexer");
         rtpr = r;
         this.streamSynch = streamSynch;
         buffer = new Buffer();
     }
-
-    public String consumerString()
-    {
-        return "RTP DeMultiplexer";
-    }
-
-    //public void demuxpayload(Packet p)
-    //{
-    //    demuxpayload(p);
-    //}
 
     public void demuxpayload(SourceRTPPacket sp)
     {
         SSRCInfo info = sp.ssrcinfo;
         RTPPacket rtpPacket = sp.p;
         info.payloadType = rtpPacket.payloadType;
+        
         if (info.dstream != null)
         {
             buffer.setData(rtpPacket.base.data);
