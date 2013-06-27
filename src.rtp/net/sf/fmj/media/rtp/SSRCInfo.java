@@ -47,8 +47,6 @@ public abstract class SSRCInfo implements Report
     boolean newpartsent;
     boolean lastsr;
     boolean wrapped;
-    static final int INITIALPROBATION = 2;
-    int probation;
     static final int PAYLOAD_UNASSIGNED = -1;
     boolean wassender;
     int prevmaxseq;
@@ -112,7 +110,6 @@ public abstract class SSRCInfo implements Report
         newpartsent = false;
         lastsr = false;
         wrapped = false;
-        probation = INITIALPROBATION;
         wassender = false;
         currentformat = null;
         payloadType = -1;
@@ -166,7 +163,6 @@ public abstract class SSRCInfo implements Report
         newpartsent = false;
         lastsr = false;
         wrapped = false;
-        probation = INITIALPROBATION;
         wassender = false;
         currentformat = null;
         payloadType = -1;
@@ -212,7 +208,6 @@ public abstract class SSRCInfo implements Report
         recvstrmap = info.recvstrmap;
         newpartsent = info.newpartsent;
         lastsr = info.lastsr;
-        probation = info.probation;
         wassender = info.wassender;
         prevmaxseq = info.prevmaxseq;
         prevlost = info.prevlost;
@@ -430,11 +425,8 @@ public abstract class SSRCInfo implements Report
 
     void initsource(int seqnum)
     {
-        if (probation <= 0)
-        {
-            active = true;
-            setSender(true);
-        }
+        active = true;
+        setSender(true);
         baseseq = seqnum;
         maxseq = seqnum - 1;
         lastbadseq = -2;

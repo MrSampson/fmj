@@ -192,6 +192,7 @@ public class SSRCCache
             }
             info = lookup(ssrc);
             if (info != null)
+            {
                 synchronized (info)
                 {
                     if (info.address == null || !info.alive)
@@ -199,22 +200,18 @@ public class SSRCCache
                         info.address = address;
                         info.port = port;
                     } else if (!info.address.equals(address))
-                        if (info.probation > 0)
-                        {
-                            info.probation = 2;
-                            info.address = address;
-                            info.port = port;
-                        } else
-                        {
-                            stats.update(4, 1);
-                            transstats.remote_coll++;
-                            RemoteCollisionEvent evt = new RemoteCollisionEvent(
-                                    sm, info.ssrc);
-                            eventhandler.postEvent(evt);
-                            SSRCInfo ssrcinfo5 = null;
-                            return ssrcinfo5;
-                        }
+                    {
+                        stats.update(4, 1);
+                        transstats.remote_coll++;
+                        RemoteCollisionEvent evt = new RemoteCollisionEvent(sm,
+                                info.ssrc);
+                        eventhandler.postEvent(evt);
+                        SSRCInfo ssrcinfo5 = null;
+                        return ssrcinfo5;
+                    }
                 }
+            }
+            
             if (info != null && mode == 1 && !(info instanceof RecvSSRCInfo))
             {
                 if (info.ours)

@@ -165,8 +165,6 @@ public class RTCPReceiver implements PacketConsumer
                 }
             }
 
-            if (ssrcinfo.probation > 0)
-                break;
             if (!ssrcinfo.newpartsent && ssrcinfo.sourceInfo != null)
             {
                 NewParticipantEvent newparticipantevent = new NewParticipantEvent(

@@ -38,7 +38,6 @@ public class RTPReceiver extends PacketFilter
     private final SSRCCache cache;
     private final RTPDemultiplexer rtpdemultiplexer;
     private boolean rtcpstarted;
-    private final SSRCTable probationList;
     private static final int MAX_DROPOUT = 3000;
     private static final int MAX_MISORDER = 100;
 
@@ -49,7 +48,6 @@ public class RTPReceiver extends PacketFilter
     public RTPReceiver(SSRCCache ssrccache, RTPDemultiplexer rtpdemultiplexer)
     {
         rtcpstarted = false;
-        probationList = new SSRCTable();
         controlName = "javax.media.rtp.RTPControl";
         cache = ssrccache;
         this.rtpdemultiplexer = rtpdemultiplexer;
@@ -99,14 +97,9 @@ public class RTPReceiver extends PacketFilter
             SSRCInfo ssrcinfo = getSsrcInfo(rtpPacket);
             processCsrcs(rtpPacket);
             initSsrcInfoIfRequired(rtpPacket, ssrcinfo);
-            boolean probationPacketToDemux = updateStats(rtpPacket, ssrcinfo);
+            updateStats(rtpPacket, ssrcinfo);
             handleRTCP(rtpPacket);
-            putPacketOnProbationIfRequired(rtpPacket, ssrcinfo);
-
-            // Only update the maximum sequence number seen after the probation
-            // check is performed.
             ssrcinfo.maxseq = rtpPacket.seqnum;
-
             performMisMatchedPayloadCheck(rtpPacket, ssrcinfo);
             initializeCurrentFormatIfRequired(rtpPacket, ssrcinfo);
             updateFormatOnDataSourceControl(rtpPacket, ssrcinfo);
@@ -115,7 +108,7 @@ public class RTPReceiver extends PacketFilter
             fireNewReceiveStreamEventIfRequired(ssrcinfo);
             updateSsrcInfoStats(rtpPacket, ssrcinfo);
             updateQuietStatusIfRequired(ssrcinfo);
-            demuxPacket(rtpPacket, ssrcinfo, probationPacketToDemux);
+            demuxPacket(rtpPacket, ssrcinfo);
         }
         catch (FailedToProcessPacketException e)
         {
@@ -144,24 +137,10 @@ public class RTPReceiver extends PacketFilter
     }
 
     private void demuxPacket(RTPPacket rtpPacket,
-                             SSRCInfo ssrcinfo,
-                             boolean probationPacketToDemux)
+                             SSRCInfo ssrcinfo)
     {
         if (ssrcinfo.dsource != null)
         {
-            if (probationPacketToDemux)
-            {
-                // Demux a probation packet
-                RTPPacket rtppacket =
-                                (RTPPacket) probationList.remove(ssrcinfo.ssrc);
-
-                if (rtppacket != null)
-                {
-                        rtpdemultiplexer.demuxpayload(
-                                       new SourceRTPPacket(rtppacket,ssrcinfo));
-                }
-            }
-
             // Demux the actual packet
             SourceRTPPacket sourcertppacket = new SourceRTPPacket(rtpPacket, ssrcinfo);
             rtpdemultiplexer.demuxpayload(sourcertppacket);
@@ -365,18 +344,6 @@ public class RTPReceiver extends PacketFilter
         }
     }
 
-    private void putPacketOnProbationIfRequired(RTPPacket rtpPacket,
-                                                SSRCInfo ssrcinfo) throws FailedToProcessPacketException
-    {
-        if (ssrcinfo.probation > 0)
-        {
-            probationList.put(ssrcinfo.ssrc, rtpPacket.clone());
-            throw new FailedToProcessPacketException(
-              "Adding packet to probation list and dropping it. seqnum=" +
-              rtpPacket.seqnum);
-        }
-    }
-
     private void handleRTCP(RTPPacket rtpPacket)
     {
         if (cache.sm.isUnicast())
@@ -409,34 +376,28 @@ public class RTPReceiver extends PacketFilter
                 cache.sm.addUnicastAddr(((UDPPacket) rtpPacket.base).remoteAddress);
     }
 
-    private boolean updateStats(RTPPacket rtpPacket, SSRCInfo ssrcinfo)
+    private void updateStats(RTPPacket rtpPacket, SSRCInfo ssrcinfo)
     {
         int diff = rtpPacket.seqnum - ssrcinfo.maxseq;
+        
         if (ssrcinfo.maxseq + 1 != rtpPacket.seqnum && diff > 0)
+        {
             ssrcinfo.stats.update(RTPStats.PDULOST, diff - 1);
+        }
 
         //Packets arriving out of order have already been counted as lost (by
         //the clause above), so decrease the lost count.
         if (diff > -MAX_MISORDER && diff < 0)
-            ssrcinfo.stats.update(RTPStats.PDULOST, -1);
-        if (ssrcinfo.wrapped)
-            ssrcinfo.wrapped = false;
-        boolean flag = false;
-        if (ssrcinfo.probation > 0)
         {
-            if (rtpPacket.seqnum == ssrcinfo.maxseq + 1)
-            {
-                ssrcinfo.probation--;
-                ssrcinfo.maxseq = rtpPacket.seqnum;
-                if (ssrcinfo.probation == 0)
-                    flag = true;
-            } else
-            {
-                ssrcinfo.probation = 1;
-                ssrcinfo.maxseq = rtpPacket.seqnum;
-                ssrcinfo.stats.update(RTPStats.PDUMISORD);
-            }
-        } else if (diff < MAX_DROPOUT)
+            ssrcinfo.stats.update(RTPStats.PDULOST, -1);
+        }
+        
+        if (ssrcinfo.wrapped)
+        {
+            ssrcinfo.wrapped = false;
+        }
+        
+        if (diff < MAX_DROPOUT)
         {
             if (rtpPacket.seqnum < ssrcinfo.baseseq)
             {
@@ -457,14 +418,16 @@ public class RTPReceiver extends PacketFilter
                 }
             }
             ssrcinfo.maxseq = rtpPacket.seqnum;
-        } else if (diff <= (65536 - MAX_MISORDER))
+        } 
+        else if (diff <= (65536 - MAX_MISORDER))
         {
             ssrcinfo.stats.update(RTPStats.PDUINVALID);
             if (rtpPacket.seqnum == ssrcinfo.lastbadseq)
                 ssrcinfo.initsource(rtpPacket.seqnum);
             else
                 ssrcinfo.lastbadseq = rtpPacket.seqnum + 1 & 0xffff;
-        } else
+        } 
+        else
         {
             /*
              * TODO Boris Grozev: The case of diff==0 is caught in
@@ -476,8 +439,6 @@ public class RTPReceiver extends PacketFilter
 
         ssrcinfo.received++;
         ssrcinfo.stats.update(RTPStats.PDUPROCSD);
-
-        return flag;
     }
 
     private void initSsrcInfoIfRequired(RTPPacket rtpPacket, SSRCInfo ssrcinfo)
