@@ -1,6 +1,6 @@
 package net.sf.fmj.media.rtp;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.*;
 
 import javax.media.*;
@@ -9,7 +9,6 @@ import javax.media.rtp.*;
 import javax.media.rtp.event.*;
 
 import net.sf.fmj.media.*;
-import net.sf.fmj.media.protocol.rtp.*;
 import net.sf.fmj.media.rtp.util.*;
 
 /**
@@ -81,7 +80,7 @@ public class RTPReceiver extends PacketFilter
     {
         return null;
     }
-    
+
     /**
      * Handle an RTP packet.
      *
@@ -129,9 +128,13 @@ public class RTPReceiver extends PacketFilter
 
     private void handleUnsupportedPayloadType(RTPPacket rtpPacket) throws PartiallyProcessedPacketException
     {
-        if (rtpPacket.payloadType == 13 || rtpPacket.payloadType == 18)
+        if ((rtpPacket.payloadType == 13) ||
+            (rtpPacket.payloadType == 18) ||
+            (rtpPacket.payloadType == 0) ||
+            (rtpPacket.payloadType == 8))
         {
-        	//Drop CN and g729 packets without even looking at them (or logging)
+            // Drop G.711, CN and g729 packets without even looking at them (or
+            // logging)
             throw new PartiallyProcessedPacketException(null);
         }
     }
@@ -154,11 +157,15 @@ public class RTPReceiver extends PacketFilter
             ssrcinfo.quiet = false;
             ActiveReceiveStreamEvent activereceivestreamevent = null;
             if (ssrcinfo instanceof ReceiveStream)
+            {
                 activereceivestreamevent = new ActiveReceiveStreamEvent(
                         cache.sm, ssrcinfo.sourceInfo, (ReceiveStream) ssrcinfo);
+            }
             else
+            {
                 activereceivestreamevent = new ActiveReceiveStreamEvent(
                         cache.sm, ssrcinfo.sourceInfo, null);
+            }
             cache.eventhandler.postEvent(activereceivestreamevent);
         }
     }
@@ -174,7 +181,9 @@ public class RTPReceiver extends PacketFilter
             long l1 = rtpPacket.timestamp - ssrcinfo.lasttimestamp;
             double d = l - l1;
             if (d < 0.0D)
+            {
                 d = -d;
+            }
             ssrcinfo.jitter += 0.0625D * (d - ssrcinfo.jitter);
         }
         ssrcinfo.lastRTPReceiptTime = ((Packet) (rtpPacket)).receiptTime;
@@ -322,7 +331,7 @@ public class RTPReceiver extends PacketFilter
                     }
 
                     buf.append("]");
-                    
+
                     Log.warning("Stopping datasource " + ssrcinfo.dsource.hashCode() + " (used by stream(s) "  + buf.toString() + ")because of payload type "
                             + "mismatch: expecting pt="
                             + ssrcinfo.lastPayloadType + ", got pt="
@@ -347,6 +356,7 @@ public class RTPReceiver extends PacketFilter
     private void handleRTCP(RTPPacket rtpPacket)
     {
         if (cache.sm.isUnicast())
+        {
             if (!rtcpstarted)
             {
                 cache.sm.startRTCPReports(((UDPPacket) rtpPacket.base).remoteAddress);
@@ -369,17 +379,22 @@ public class RTPReceiver extends PacketFilter
                         flag2 = false;
                     }
                     if (flag2)
+                    {
                         cache.sm.addUnicastAddr(inetaddress1);
+                    }
                 }
             } else if (!cache.sm
                     .isSenderDefaultAddr(((UDPPacket) rtpPacket.base).remoteAddress))
+            {
                 cache.sm.addUnicastAddr(((UDPPacket) rtpPacket.base).remoteAddress);
+            }
+        }
     }
 
     private void updateStats(RTPPacket rtpPacket, SSRCInfo ssrcinfo)
     {
         int diff = rtpPacket.seqnum - ssrcinfo.maxseq;
-        
+
         if (ssrcinfo.maxseq + 1 != rtpPacket.seqnum && diff > 0)
         {
             ssrcinfo.stats.update(RTPStats.PDULOST, diff - 1);
@@ -391,12 +406,12 @@ public class RTPReceiver extends PacketFilter
         {
             ssrcinfo.stats.update(RTPStats.PDULOST, -1);
         }
-        
+
         if (ssrcinfo.wrapped)
         {
             ssrcinfo.wrapped = false;
         }
-        
+
         if (diff < MAX_DROPOUT)
         {
             if (rtpPacket.seqnum < ssrcinfo.baseseq)
@@ -418,15 +433,19 @@ public class RTPReceiver extends PacketFilter
                 }
             }
             ssrcinfo.maxseq = rtpPacket.seqnum;
-        } 
+        }
         else if (diff <= (65536 - MAX_MISORDER))
         {
             ssrcinfo.stats.update(RTPStats.PDUINVALID);
             if (rtpPacket.seqnum == ssrcinfo.lastbadseq)
+            {
                 ssrcinfo.initsource(rtpPacket.seqnum);
+            }
             else
+            {
                 ssrcinfo.lastbadseq = rtpPacket.seqnum + 1 & 0xffff;
-        } 
+            }
+        }
         else
         {
             /*
@@ -457,13 +476,19 @@ public class RTPReceiver extends PacketFilter
         {
             SSRCInfo csrcinfo = null;
             if (rtpPacket.base instanceof UDPPacket)
+            {
                 csrcinfo = cache.get(rtpPacket.csrc[i],
                         ((UDPPacket) rtpPacket.base).remoteAddress,
                         ((UDPPacket) rtpPacket.base).remotePort, 1);
+            }
             else
+            {
                 csrcinfo = cache.get(rtpPacket.csrc[i], null, 0, 1);
+            }
             if (csrcinfo != null)
+            {
                 csrcinfo.lastHeardFrom = ((Packet) (rtpPacket)).receiptTime;
+            }
         }
     }
 
