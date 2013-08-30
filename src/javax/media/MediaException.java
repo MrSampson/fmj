@@ -21,5 +21,9 @@ public class MediaException extends Exception
     {
         super(message);
     }
-
+    
+    public MediaException(String message, Throwable t)
+    {
+    	super(message, t);
+    }
 }
