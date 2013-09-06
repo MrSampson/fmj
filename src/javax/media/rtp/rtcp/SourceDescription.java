@@ -32,13 +32,7 @@ public class SourceDescription implements java.io.Serializable
     {
         // generates something like user@host
         final String hostname;
-        try
-        {
-            hostname = InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException e)
-        {
-            throw new RuntimeException(e);
-        }
+        hostname = "localhost";
 
         return System.getProperty("user.name") + '@' + hostname;
 
