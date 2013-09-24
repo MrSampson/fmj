@@ -14,7 +14,7 @@ import net.sf.fmj.media.datasink.*;
 public abstract class BasicMux extends BasicPlugIn implements
         javax.media.Multiplexer, Clock
 {
-    class BasicMuxDataSource extends PushDataSource
+    protected class BasicMuxDataSource extends PushDataSource
     {
         private BasicMux mux;
         private ContentDescriptor cd;
@@ -84,7 +84,7 @@ public abstract class BasicMux extends BasicPlugIn implements
             return streams;
         }
 
-        boolean isConnected()
+        public boolean isConnected()
         {
             return connected;
         }
@@ -117,7 +117,7 @@ public abstract class BasicMux extends BasicPlugIn implements
      * BasicMuxPushStream
      ****************************************************************/
 
-    class BasicMuxPushStream implements PushSourceStream
+    protected class BasicMuxPushStream implements PushSourceStream
     {
         private ContentDescriptor cd;
         private byte[] data;
@@ -143,6 +143,11 @@ public abstract class BasicMux extends BasicPlugIn implements
         public long getContentLength()
         {
             return LENGTH_UNKNOWN;
+        }
+
+        public int getDataLength()
+        {
+            return dataLen;
         }
 
         public Object getControl(String s)
@@ -223,7 +228,7 @@ public abstract class BasicMux extends BasicPlugIn implements
             }
         }
 
-        synchronized int write(byte[] data, int offset, int length)
+        public synchronized int write(byte[] data, int offset, int length)
         {
             if (sth == null)
                 return 0;
@@ -799,7 +804,7 @@ public abstract class BasicMux extends BasicPlugIn implements
     }
 
     /* Should return true if it requires a seekable transfer handler */
-    boolean needsSeekable()
+    protected boolean needsSeekable()
     {
         return false;
     }
