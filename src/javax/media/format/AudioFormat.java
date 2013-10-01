@@ -138,10 +138,10 @@ public class AudioFormat extends Format
      *            Whether the audio data is signed (<tt>true</tt>) or unsigned
      *            (<tt>false</tt>).
      */
-    public AudioFormat(String encoding, boolean signed)
+    public AudioFormat(String encoding, int signed)
     {
         this(encoding);
-        this.signed = signed ? 1 : 0;
+        this.signed = signed;
     }
 
     /**

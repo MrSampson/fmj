@@ -145,11 +145,6 @@ public abstract class BasicMux extends BasicPlugIn implements
             return LENGTH_UNKNOWN;
         }
 
-        public int getDataLength()
-        {
-            return dataLen;
-        }
-
         public Object getControl(String s)
         {
             return null;

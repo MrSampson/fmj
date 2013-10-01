@@ -1,20 +1,31 @@
 package net.sf.fmj.media.multiplexer.audio;
 
-import javax.media.Format;
-import javax.media.format.AudioFormat;
-import javax.media.protocol.ContentDescriptor;
-import javax.media.protocol.FileTypeDescriptor;
+import javax.media.*;
+import javax.media.format.*;
+import javax.media.protocol.*;
 
-import net.sf.fmj.media.codec.JavaSoundCodec;
+import net.sf.fmj.media.codec.*;
 import net.sf.fmj.media.multiplexer.*;
-import net.sf.fmj.media.renderer.audio.JavaSoundUtils;
+import net.sf.fmj.media.renderer.audio.*;
 
 public class WAVMux extends BasicMux
 {
+    /**
+     * The byte index in the header where the word containing the size of the
+     * riff chunk resides.
+     */
     private static final int RIFF_CHUNK_SIZE_IDX = 4;
 
+    /**
+     * The byte index in the header where the word containing the size of the
+     * wav 'data' chunk resides.
+     */
     private static final int WAV_DATA_CHUNK_SIZE_IDX = 40;
 
+    /**
+     * The size in bytes of the header of a PCM wav file, including both the
+     * RIFF header, the FMT chunk, and the header of the data chunk.
+     */
     private static final int WAV_FILE_HEADER_SIZE = 44;
 
     private int mBytesWritten = 0;
@@ -24,7 +35,7 @@ public class WAVMux extends BasicMux
         supportedInputs = new Format[1];
         supportedInputs[0] = new AudioFormat(
                 AudioFormat.LINEAR,
-                /* sampleRate */ Format.NOT_SPECIFIED,
+                44000,
                 16,
                 /* channels */ Format.NOT_SPECIFIED,
                 AudioFormat.LITTLE_ENDIAN,
@@ -72,6 +83,7 @@ public class WAVMux extends BasicMux
     {
         if (source == null || !source.isConnected())
             return length;
+
         if (length > 0)
         {
             filePointer += length;
@@ -90,7 +102,8 @@ public class WAVMux extends BasicMux
     @Override
     protected void writeHeader()
     {
-        // Hack - we assume all channels are in the same format.
+        // Since we request all our inputs in 44kHz signed 16-bit format,
+        // it suffices to use the first channel's format for the header, as
         javax.sound.sampled.AudioFormat javaAudioFormat =
                 JavaSoundUtils.convertFormat((AudioFormat) inputs[0]);
         byte[] wavHeader = JavaSoundCodec.createWavHeader(javaAudioFormat);
