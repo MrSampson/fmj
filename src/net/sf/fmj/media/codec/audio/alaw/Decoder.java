@@ -94,6 +94,7 @@ public class Decoder extends AbstractCodec
     @Override
     public int process(Buffer inputBuffer, Buffer outputBuffer)
     {
+        Log.comment("FMJ A-law decoder " + this.hashCode() + " processing buffer");
         if (TRACE)
             dump("input ", inputBuffer);
 

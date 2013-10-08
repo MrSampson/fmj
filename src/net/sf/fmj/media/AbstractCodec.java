@@ -60,14 +60,46 @@ public abstract class AbstractCodec extends AbstractPlugIn implements Codec
 
     public Format setInputFormat(Format format)
     {
-        this.inputFormat = format;
-        return inputFormat;
+        if (matches(format, getSupportedInputFormats()) != null)
+        {
+            Log.comment("Setting input format on AbstractCodec to " + format);
+            this.inputFormat = format;
+            return inputFormat;
+        }
+
+        Log.info("AbstractCodec doesn't support format " + format);
+        return null;
     }
 
     public Format setOutputFormat(Format format)
     {
-        this.outputFormat = format;
-        return outputFormat;
+        if (matches(format, getSupportedOutputFormats(this.inputFormat)) != null)
+        {
+            Log.comment("Setting output format on AbstractCodec to " + format);
+            this.outputFormat = format;
+            return outputFormat;
+        }
+
+        Log.info("AbstractCodec doesn't support format " + format);
+        return null;
     }
 
+    /**
+     * Utility to perform format matching.
+     *
+     * @param in input format
+     * @param outs array of output formats
+     * @return the first output format that is supported
+     */
+    public static Format matches(Format in, Format outs[])
+    {
+        for (Format out : outs)
+        {
+            if (in.matches(out))
+            {
+                return out;
+            }
+        }
+        return null;
+    }
 }

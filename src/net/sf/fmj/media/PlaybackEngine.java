@@ -2205,11 +2205,15 @@ public class PlaybackEngine extends BasicController implements ModuleListener
         {
             oc = source.getOutputConnector(names[i]);
             if ((ic = oc.getInputConnector()) == null)
+            {
                 continue;
+            }
             if ((m = ic.getModule()) == null)
+            {
                 continue;
-            Log.write("  " + getPlugIn(source));
-            Log.write("     connects to: " + getPlugIn((BasicModule) m));
+            }
+            Log.write("  " + getPlugIn(source) + " (" + getPlugIn(source).hashCode() + ")");
+            Log.write("     connects to: " + getPlugIn((BasicModule)m) + " (" + getPlugIn((BasicModule)m).hashCode() + ")");
             Log.write("     format: " + oc.getFormat());
             traceGraph((BasicModule) m);
         }

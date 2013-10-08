@@ -61,6 +61,7 @@ public abstract class BasicCodec extends BasicPlugIn implements Codec
 
     public void close()
     {
+        Log.annotate(this, "Closing");
         opened = false;
     }
 

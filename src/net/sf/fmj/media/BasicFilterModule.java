@@ -164,42 +164,6 @@ public class BasicFilterModule extends BasicModule
                     inputBuffer.setFormat(incomingFormat);
                 }
 
-                if (incomingFormat != ic.getFormat() && incomingFormat != null
-                        && !incomingFormat.equals(ic.getFormat())
-                        && !inputBuffer.isDiscard())
-                {
-                    // The format is changed mid-stream!
-
-                    if (writePendingFlag)
-                    {
-                        // Discard the pending output buffer.
-                        storedOutputBuffer.setDiscard(true);
-                        oc.writeReport();
-                        writePendingFlag = false;
-                    }
-
-                    // Attempt to re-initialize the plugin codec.
-                    // Bail out if failed.
-                    if (!reinitCodec(inputBuffer.getFormat()))
-                    {
-                        // Failed.
-                        inputBuffer.setDiscard(true);
-                        ic.readReport();
-                        failed = true;
-                        // Just signal an internal error for now.
-                        if (moduleListener != null)
-                            moduleListener.formatChangedFailure(this,
-                                    ic.getFormat(), inputBuffer.getFormat());
-                        return;
-                    }
-
-                    Format oldFormat = ic.getFormat();
-                    ic.setFormat(inputBuffer.getFormat());
-                    if (moduleListener != null)
-                        moduleListener.formatChanged(this, oldFormat,
-                                inputBuffer.getFormat());
-                }
-
                 // The marker flag needs to be handle more delicately.
                 // For codec that takes multiple input buffers to generate
                 // a single output buffer (e.g. RTP depackizer), if there's
@@ -406,6 +370,10 @@ public class BasicFilterModule extends BasicModule
      * A new input format has been detected, we'll check if the existing codec
      * can handle it. Otherwise, we'll try to re-create a new codec to handle
      * it.
+     *
+     * XXX There seems to be a bug in this method that closing the old codec
+     * doesn't seem to work - that codec is still passed the packet to process.
+     * Therefore, this is no longer used by BasicFilterModule.
      */
     protected boolean reinitCodec(Format input)
     {
@@ -433,6 +401,7 @@ public class BasicFilterModule extends BasicModule
 
     public boolean setCodec(Codec codec)
     { // patch until codecmanager exists
+        Log.createLink(this, codec, "Setting codec");
         this.codec = codec;
         return true;
     }

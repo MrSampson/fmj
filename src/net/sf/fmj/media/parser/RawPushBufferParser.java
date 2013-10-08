@@ -757,6 +757,8 @@ public class RawPushBufferParser extends RawStreamParser
     public void setSource(DataSource source) throws IOException,
             IncompatibleSourceException
     {
+        Log.annotate(this, "setSource: " + source.hashCode());
+
         if (!(source instanceof PushBufferDataSource))
         {
             throw new IncompatibleSourceException("DataSource not supported: "
@@ -797,6 +799,7 @@ public class RawPushBufferParser extends RawStreamParser
             ((FrameTrack) tracks[i]).start();
         source.start();
         started = true;
+        Log.annotate(this, "start");
     }
 
     /**
@@ -812,10 +815,12 @@ public class RawPushBufferParser extends RawStreamParser
                 ((FrameTrack) tracks[i]).stop();
 
             source.stop();
+            Log.annotate(this, "stop");
 
         } catch (Exception e)
         {
-            // Internal errors?
+            Log.error("Hit exception stopping RawPushBufferParser " +
+                this.hashCode() + "\n" + e);
         }
         started = false;
     }

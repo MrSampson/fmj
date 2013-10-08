@@ -92,6 +92,7 @@ public class RTPReceiver extends PacketFilter
     {
         try
         {
+            Log.comment("Received RTP packet (seq " + rtpPacket.seqnum + ")");
             handleUnsupportedPayloadType(rtpPacket);
             checkNetworkAddress(rtpPacket);
             SSRCInfo ssrcinfo = getSsrcInfo(rtpPacket);
@@ -129,10 +130,12 @@ public class RTPReceiver extends PacketFilter
 
     private void handleUnsupportedPayloadType(RTPPacket rtpPacket) throws PartiallyProcessedPacketException
     {
-        if (rtpPacket.payloadType == 13 || rtpPacket.payloadType == 18)
+        if (rtpPacket.payloadType == 13 ||
+            rtpPacket.payloadType == 18)
         {
-        	//Drop CN and g729 packets without even looking at them (or logging)
-            throw new PartiallyProcessedPacketException(null);
+            // Drop CN and G.729 packets as not supported
+            throw new PartiallyProcessedPacketException(
+                "Dropping unsupported packet type: " + rtpPacket.payloadType);
         }
     }
 
@@ -192,6 +195,7 @@ public class RTPReceiver extends PacketFilter
             NewReceiveStreamEvent newreceivestreamevent = new NewReceiveStreamEvent(
                     cache.sm, (ReceiveStream) ssrcinfo);
             ssrcinfo.newrecvstream = true;
+            Log.info("Posting NewReceivedStreamEvent for stream " + ssrcinfo.hashCode());
             cache.eventhandler.postEvent(newreceivestreamevent);
         }
     }
