@@ -711,8 +711,6 @@ public class RawPushBufferParser extends RawStreamParser
     @Override
     public Track[] getTracks()
     {
-        for (int i = 0; i < tracks.length; i++)
-            ((FrameTrack) tracks[i]).parse();
         return tracks;
     }
 
