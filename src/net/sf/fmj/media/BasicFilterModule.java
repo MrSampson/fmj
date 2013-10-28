@@ -13,7 +13,7 @@ import net.sf.fmj.filtergraph.*;
  * connector, pass the data to the level 3 plugIn codec and put the result in
  * the OutputConnector. BasicFilterModule can be either Push or Pull driven. The
  * plugIn codec might be media decoder, media encoder, effect etc.
- * 
+ *
  */
 public class BasicFilterModule extends BasicModule
 {
@@ -257,9 +257,11 @@ public class BasicFilterModule extends BasicModule
 
             } catch (Throwable e)
             {
+                // Let's log the stack but we don't want to kill the thread
+                // just because we've failed to process a single packet.
+                Log.error("Exception processing packet - drop it and continue");
                 Log.dumpStack(e);
-                if (moduleListener != null)
-                    moduleListener.internalErrorOccurred(this);
+                rc = PlugIn.BUFFER_PROCESSED_FAILED;
             }
 
             if (PlaybackEngine.TRACE_ON && !verifyBuffer(outputBuffer))
@@ -408,7 +410,7 @@ public class BasicFilterModule extends BasicModule
 
     /**
      * sets the plugIn codec of this filter.
-     * 
+     *
      * @param codec
      *            the plugIn codec (should we specify Codec class or String)
      * @return true if successful
@@ -445,18 +447,18 @@ public class BasicFilterModule extends BasicModule
      * instanceof RGBFormat) { RGBFormat rgb = (RGBFormat) buffer.getFormat();
      * if (monitorFrame == null) { monitorSize = rgb.getSize(); monitorPanel =
      * new Panel() { public void update(Graphics g) { }
-     * 
+     *
      * public void paint(Graphics g) { }
-     * 
+     *
      * public Dimension getPreferredSize() { return monitorSize; } };
      * monitorFrame = new Frame("Monitor"); monitorFrame.setLayout( new
      * BorderLayout() ); monitorFrame.add("Center", monitorPanel);
      * monitorFrame.pack();
-     * 
+     *
      * monitorFrame.setVisible(true); } long currentTime =
      * System.currentTimeMillis(); if (currentTime >= oldTime + 1000) { oldTime
      * = currentTime;
-     * 
+     *
      * Image image = javax.media.util.ImageConverter.convertToImage(buffer);
      * Graphics g = monitorPanel.getGraphics(); g.drawImage(image, 0, 0,
      * monitorPanel); } } }

@@ -9,7 +9,7 @@ import net.sf.fmj.media.*;
 import net.sf.fmj.media.protocol.*;
 import net.sf.fmj.media.protocol.rtp.DataSource;
 import net.sf.fmj.media.rtp.util.*;
-import net.sf.fmj.utility.charting.Charting;
+import net.sf.fmj.utility.charting.*;
 
 /**
  * Implements a <tt>PushBufferStream</tt> which represents a stream of RTP
@@ -107,7 +107,7 @@ public class RTPSourceStream
     	{
     		reset();
     	}
-    	
+
         if (!started && !bufferWhenStopped)
             return;
 
@@ -483,7 +483,7 @@ public class RTPSourceStream
         if (this.format != format)
         {
             this.format = format;
-            
+
             Log.annotate(this, "Setting format " + format.toString());
 
             /*
@@ -525,12 +525,11 @@ public class RTPSourceStream
     public void stop()
     {
         Log.annotate(this, "stop");
-        
+
         synchronized (startSyncRoot)
         {
             started = false;
-            if (!bufferWhenStopped)
-                reset();
+            reset();
         }
         synchronized (q)
         {
