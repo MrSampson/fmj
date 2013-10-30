@@ -24,9 +24,6 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
     private static final Logger logger = Logger.getLogger(RTPSessionMgr.class
             .getName());
 
-    private static final String SOURCE_DESC_EMAIL
-        = "fmj-devel@lists.sourceforge.net";
-
     private static final String SOURCE_DESC_TOOL = "FMJ RTP Player";
 
     public static boolean formatSupported(Format format)
@@ -919,7 +916,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
             }
 
         }
-        
+
         NewSendStreamEvent newsendstreamevent = new NewSendStreamEvent(this,
                 obj);
         cache.eventhandler.postEvent(newsendstreamevent);
@@ -1200,7 +1197,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
     /**
      * Emcho: Returns the SSRC ID that we are currently using or -1 if we don't
      * know it just yet.
-     * 
+     *
      * @return the SSRC ID that we are currently using or -1 if we don't know it
      *         just yet.
      */
@@ -1364,7 +1361,6 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         newRtpInterface = true;
         String s = SourceDescription.generateCNAME();
         SourceDescription asourcedescription[] = {
-                new SourceDescription(3, SOURCE_DESC_EMAIL, 1, false),
                 new SourceDescription(1, s, 1, false),
                 new SourceDescription(6, SOURCE_DESC_TOOL, 1, false) };
         int i = (int) generateSSRC();
@@ -1428,7 +1424,6 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
     {
         String s = SourceDescription.generateCNAME();
         SourceDescription asourcedescription[] = {
-                new SourceDescription(3, SOURCE_DESC_EMAIL, 1, false),
                 new SourceDescription(1, s, 1, false),
                 new SourceDescription(6, SOURCE_DESC_TOOL, 1, false) };
         double d = 0.050000000000000003D;
@@ -1990,7 +1985,6 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
                 passivessrcinfo.setAlive(true);
 
                 SourceDescription asourcedescription[] = {
-                        new SourceDescription(3, SOURCE_DESC_EMAIL, 1, false),
                         new SourceDescription(1, generateCNAME(), 1, false),
                         new SourceDescription(6, SOURCE_DESC_TOOL, 1,
                                 false) };

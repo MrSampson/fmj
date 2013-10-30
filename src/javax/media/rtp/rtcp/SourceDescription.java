@@ -2,13 +2,15 @@ package javax.media.rtp.rtcp;
 
 import java.net.*;
 
+import net.sf.fmj.media.*;
+
 /**
  * Standard JMF class -- see <a href=
  * "http://java.sun.com/products/java-media/jmf/2.1.1/apidocs/javax/media/rtp/rtcp/SourceDescription.html"
  * target="_blank">this class in the JMF Javadoc</a>. Coding complete.
- * 
+ *
  * @author Ken Larson
- * 
+ *
  */
 public class SourceDescription implements java.io.Serializable
 {
@@ -31,13 +33,15 @@ public class SourceDescription implements java.io.Serializable
     public static String generateCNAME()
     {
         // generates something like user@host
-        final String hostname;
+        String hostname;
         try
         {
             hostname = InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException e)
+        }
+        catch (Exception e)
         {
-            throw new RuntimeException(e);
+            Log.warning("Hit exception getting local host - set to hostname");
+            hostname = "hostname";
         }
 
         return System.getProperty("user.name") + '@' + hostname;
