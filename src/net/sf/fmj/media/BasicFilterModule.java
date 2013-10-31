@@ -259,6 +259,7 @@ public class BasicFilterModule extends BasicModule
             {
                 // Let's log the stack but we don't want to kill the thread
                 // just because we've failed to process a single packet.
+                Log.error("Exception processing packet - drop it and continue");
                 Log.dumpStack(e);
                 rc = PlugIn.BUFFER_PROCESSED_FAILED;
             }
