@@ -6,9 +6,9 @@ import net.sf.fmj.utility.*;
 
 /**
  * Abstract base class to implement Codec.
- * 
+ *
  * @author Ken Larson
- * 
+ *
  */
 public abstract class AbstractCodec extends AbstractPlugIn implements Codec
 {
@@ -62,7 +62,6 @@ public abstract class AbstractCodec extends AbstractPlugIn implements Codec
     {
         if (matches(format, getSupportedInputFormats()) != null)
         {
-            Log.comment("Setting input format on AbstractCodec to " + format);
             this.inputFormat = format;
             return inputFormat;
         }
@@ -75,7 +74,6 @@ public abstract class AbstractCodec extends AbstractPlugIn implements Codec
     {
         if (matches(format, getSupportedOutputFormats(this.inputFormat)) != null)
         {
-            Log.comment("Setting output format on AbstractCodec to " + format);
             this.outputFormat = format;
             return outputFormat;
         }
