@@ -3,8 +3,6 @@ package net.sf.fmj.media;
 import java.util.*;
 import java.util.logging.*;
 
-import net.sf.fmj.media.protocol.rtp.*;
-
 /**
  * A public static class to generate and write to fmj.log.
  */
@@ -12,8 +10,13 @@ public class Log
 {
     public static boolean isEnabled = false; /* The default JMF value is false. */
     private static int indent = 0;
-    
-    static Set<Integer> seenObjects = new HashSet<Integer>();
+
+    /*
+     * Set of objects that have been seen by the logger.  This must be
+     * synchronized as multiple threads will write logs.
+     */
+    static Set<Integer> seenObjects =
+        Collections.synchronizedSet(new HashSet<Integer>());
 
     /**
      * The Logger instance to be used.
@@ -59,7 +62,7 @@ public class Log
                 buf.append(s.toString());
                 buf.append("\n");
             }
-            
+
             logger.info(buf.toString());
         }
     }
@@ -146,7 +149,7 @@ public class Log
             String description)
     {
         seenObjects.add(object.hashCode());
-       
+
         if (isEnabled && logger.isLoggable(Level.FINE))
             logger.fine("CREATE " + object.hashCode() + " " + description);
     }
@@ -157,12 +160,12 @@ public class Log
         {
             logger.fine("LINK missing CREATE for source " + source.toString());
         }
-        
+
         if (destination != null && ! seenObjects.contains(destination.hashCode()))
         {
             logger.fine("LINK missing CREATE for destination " + destination.toString());
         }
-        
+
         if (isEnabled && logger.isLoggable(Level.FINE))
             logger.fine("LINK " + ((source == null) ? "null" :source.hashCode()) + " " + ((destination == null) ? "null" : destination.hashCode()) + " " + description);
     }
