@@ -1144,7 +1144,19 @@ class RenderThread extends LoopThread
     {
         this.module = module;
         setName(getName() + ": " + module.renderer);
-        useAudioPriority();
+
+        // Set the priority of this thread based on whether it's a video or
+        // audio renderer (as video is typically lower priority than audio).
+        if (module.getRenderer() instanceof javax.media.renderer.VideoRenderer)
+        {
+            Log.objectCreated(this, "VideoRenderThread");
+            useVideoPriority();
+        }
+        else
+        {
+            Log.objectCreated(this, "AudioRenderThread");
+            useAudioPriority();
+        }
     }
 
     @Override
