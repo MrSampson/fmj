@@ -11,7 +11,7 @@ public class MediaThread extends Thread
     private static final boolean debug = false;
 
     private static int controlPriority = Thread.MAX_PRIORITY - 1;
-    private static int audioPriority = Thread.MAX_PRIORITY - 5;
+    private static int audioPriority = Thread.MAX_PRIORITY - 2;
     /* To be less than the Appletpriority */
     private static int videoPriority = Thread.NORM_PRIORITY - 2;
     private static int networkPriority = audioPriority + 1;
@@ -211,7 +211,7 @@ public class MediaThread extends Thread
      * Consequently, extenders overriding the <tt>run</tt> method will not have
      * the Android thread priority applied until they call back to the
      * <tt>MediaThread</tt> implementation.
-     * 
+     *
      * @param androidThreadPriority
      *            the name of the <tt>android.os.Process</tt> static final field
      *            which specifies the thread priority of this
