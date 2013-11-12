@@ -1,12 +1,14 @@
 package net.sf.fmj.media.util;
 
+import net.sf.fmj.media.*;
+
 /**
  * LoopThread A looping thread that implements a safe way of pausing and
  * restarting. Instead of using suspend() and resume() from the thread class, a
  * pause() and start() method is provided. To use it, you will: - subclass from
  * it; - overwrite the process() callback; - call start() to initiate the
  * thread.
- * 
+ *
  * @version 1.9, 98/09/28
  */
 public abstract class LoopThread extends MediaThread
@@ -21,6 +23,7 @@ public abstract class LoopThread extends MediaThread
     public LoopThread()
     {
         setName("Loop thread");
+        Log.objectCreated(this, "Loop Thread");
     }
 
     /**
@@ -31,6 +34,7 @@ public abstract class LoopThread extends MediaThread
     {
         if (waitingAtPaused || killed)
             return;
+        Log.annotate(this, "BlockingPause");
         paused = true;
         waitForCompleteStop();
     }
@@ -54,6 +58,7 @@ public abstract class LoopThread extends MediaThread
      */
     public synchronized void pause()
     {
+        Log.annotate(this, "Pause");
         paused = true;
     }
 
@@ -73,6 +78,7 @@ public abstract class LoopThread extends MediaThread
          * example, it may set the priority of this thread.
          */
         super.run();
+        Log.annotate(this, "Start");
 
         for (;;)
         {
@@ -85,6 +91,8 @@ public abstract class LoopThread extends MediaThread
             if (!process())
                 break;
         }
+
+        Log.annotate(this, "Stop");
     }
 
     /**
@@ -98,6 +106,7 @@ public abstract class LoopThread extends MediaThread
         {
             super.start();
             started = true;
+            Log.annotate(this, "Start");
         }
         paused = false;
         notifyAll();

@@ -54,6 +54,7 @@ public class RawPushBufferParser extends RawStreamParser
         public void close()
         {
             // Unblock the transfer handlers.
+            Log.annotate(this, "Close");
             setEnabled(false);
             synchronized (bufferQ)
             {
@@ -560,6 +561,7 @@ public class RawPushBufferParser extends RawStreamParser
         {
             // we need to ensure that readFrame is returned to its
             // original state and does not return w/o blocking.
+            Log.annotate(this, "Start");
             synchronized (bufferQ)
             {
                 stopped = false;
@@ -581,6 +583,7 @@ public class RawPushBufferParser extends RawStreamParser
             // we basically need to ensure that readFrame will return
             // immediately.and also make sure that if it is called in
             // the stopped state, it returns w/o blocking.
+            Log.annotate(this, "Start");
             synchronized (bufferQ)
             {
                 stopped = true;

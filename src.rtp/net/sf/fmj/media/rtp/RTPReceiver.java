@@ -262,7 +262,11 @@ public class RTPReceiver extends PacketFilter
             if (rtpControlImpl != null)
             {
                 Format format = cache.sm.formatinfo.get(rtpPacket.payloadType);
-                rtpControlImpl.currentformat = format;
+                if (!format.equals(rtpControlImpl.getFormat()))
+                {
+                    Log.info("Setting format on data source to: " + format);
+                    rtpControlImpl.currentformat = format;
+                }
             }
         }
     }

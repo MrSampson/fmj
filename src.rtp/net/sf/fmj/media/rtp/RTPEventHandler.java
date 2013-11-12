@@ -5,6 +5,7 @@ import java.util.*;
 import javax.media.rtp.*;
 import javax.media.rtp.event.*;
 
+import net.sf.fmj.media.*;
 import net.sf.fmj.media.rtp.util.*;
 
 public class RTPEventHandler extends RTPMediaThread
@@ -89,7 +90,10 @@ public class RTPEventHandler extends RTPMediaThread
                 ReceiveStreamListener sl = (ReceiveStreamListener) sm.streamlistener
                         .elementAt(i);
                 if (sl != null)
+                {
+                    Log.info("Passing event to receive stream listener: " + sl.hashCode());
                     sl.update((ReceiveStreamEvent) evt);
+                }
             }
 
             return;
