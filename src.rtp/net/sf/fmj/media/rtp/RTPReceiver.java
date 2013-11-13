@@ -1,6 +1,6 @@
 package net.sf.fmj.media.rtp;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.*;
 
 import javax.media.*;
@@ -9,7 +9,6 @@ import javax.media.rtp.*;
 import javax.media.rtp.event.*;
 
 import net.sf.fmj.media.*;
-import net.sf.fmj.media.protocol.rtp.*;
 import net.sf.fmj.media.rtp.util.*;
 
 /**
@@ -21,6 +20,8 @@ public class RTPReceiver extends PacketFilter
 {
     public class PartiallyProcessedPacketException extends Exception
     {
+        private static final long serialVersionUID = 1L;
+
         public PartiallyProcessedPacketException(String message)
         {
             super(message);
@@ -29,6 +30,8 @@ public class RTPReceiver extends PacketFilter
 
     private class FailedToProcessPacketException extends Exception
     {
+        private static final long serialVersionUID = 1L;
+
         public FailedToProcessPacketException(String message)
         {
             super(message);
@@ -38,6 +41,7 @@ public class RTPReceiver extends PacketFilter
     private final SSRCCache cache;
     private final RTPDemultiplexer rtpdemultiplexer;
     private boolean rtcpstarted;
+    private int numPackets = 0;
     private static final int MAX_DROPOUT = 3000;
     private static final int MAX_MISORDER = 100;
 
@@ -68,20 +72,18 @@ public class RTPReceiver extends PacketFilter
         return handlePacket((RTPPacket) packet);
     }
 
-    @SuppressWarnings("unused")
     @Override
     public Packet handlePacket(Packet packet, int i)
     {
         return null;
     }
 
-    @SuppressWarnings("unused")
     @Override
     public Packet handlePacket(Packet packet, SessionAddress sessionaddress)
     {
         return null;
     }
-    
+
     /**
      * Handle an RTP packet.
      *
@@ -92,6 +94,46 @@ public class RTPReceiver extends PacketFilter
     {
         try
         {
+            /*
+             * The following code is for testing only - it allows us to
+             * simulate unexpected RTP packets by changing either:
+             * - the payload type
+             * - the SSRC
+             */
+            int packetsToHack = 0;
+            int hackedPayloadType = 0;
+            int hackedSSRC = -1;//0x12341234;
+            if (numPackets < packetsToHack)
+            {
+                if (hackedPayloadType != -1)
+                {
+                    Log.info("Hacking packet " + rtpPacket.seqnum + " to be PT " + hackedPayloadType);
+                    rtpPacket.payloadType = hackedPayloadType;
+                }
+
+                if (hackedSSRC != -1)
+                {
+                    Log.info("Hacking packet " + rtpPacket.seqnum + " to be SSRC " + hackedSSRC);
+                    rtpPacket.ssrc = hackedSSRC;
+                }
+            }
+            else if ((numPackets == packetsToHack) &&
+                     (numPackets != 0))
+            {
+                Log.info("Stopped hacking packets at seq " + rtpPacket.seqnum);
+            }
+            numPackets++;
+
+            /*
+             * Now the main processing of the RTPReceiver.  Run through various
+             * checks to confirm this RTP packet should be processed and, if
+             * so, demux it to the appropriate RTP Source Stream (aka Jitter
+             * Buffer).
+             *
+             * If one of the checks fails, that method will throw an exception
+             * indicating the packet should be discarded.  These exceptions are
+             * handled and logged below.
+             */
             Log.comment("Received RTP packet (seq " + rtpPacket.seqnum + ")");
             handleUnsupportedPayloadType(rtpPacket);
             checkNetworkAddress(rtpPacket);
@@ -101,9 +143,9 @@ public class RTPReceiver extends PacketFilter
             updateStats(rtpPacket, ssrcinfo);
             handleRTCP(rtpPacket);
             ssrcinfo.maxseq = rtpPacket.seqnum;
+            checkPayloadTypeCache(rtpPacket);
             performMisMatchedPayloadCheck(rtpPacket, ssrcinfo);
-            initializeCurrentFormatIfRequired(rtpPacket, ssrcinfo);
-            updateFormatOnDataSourceControl(rtpPacket, ssrcinfo);
+            setCurrentFormatIfRequired(rtpPacket, ssrcinfo);
             initBufferControlIfRequired(ssrcinfo);
             connectStreamIfRequired(rtpPacket, ssrcinfo);
             fireNewReceiveStreamEventIfRequired(ssrcinfo);
@@ -251,26 +293,6 @@ public class RTPReceiver extends PacketFilter
         }
     }
 
-    private void updateFormatOnDataSourceControl(RTPPacket rtpPacket,
-                                                 SSRCInfo ssrcinfo)
-    {
-        if (ssrcinfo.dsource != null)
-        {
-            RTPControlImpl rtpControlImpl =
-                       (RTPControlImpl)ssrcinfo.dsource.getControl(controlName);
-
-            if (rtpControlImpl != null)
-            {
-                Format format = cache.sm.formatinfo.get(rtpPacket.payloadType);
-                if (!format.equals(rtpControlImpl.getFormat()))
-                {
-                    Log.info("Setting format on data source to: " + format);
-                    rtpControlImpl.currentformat = format;
-                }
-            }
-        }
-    }
-
     private void initBufferControlIfRequired(SSRCInfo ssrcinfo)
     {
         if (!initBC)
@@ -281,32 +303,38 @@ public class RTPReceiver extends PacketFilter
         }
     }
 
-    private void initializeCurrentFormatIfRequired(RTPPacket rtpPacket,
-                                                   SSRCInfo ssrcinfo) throws PartiallyProcessedPacketException
+    /**
+     * Check whether we have a format for the current packet's payload type.
+     * If not, we're not going to be able to process it so throw it away.
+     *
+     * @param rtpPacket The RTP packet to check
+     * @throws PartiallyProcessedPacketException
+     */
+    private void checkPayloadTypeCache(RTPPacket rtpPacket)
+        throws PartiallyProcessedPacketException
     {
-        if (ssrcinfo.currentformat == null)
+        if (cache.sm.formatinfo.get(rtpPacket.payloadType) == null)
         {
-            ssrcinfo.currentformat = cache.sm.formatinfo.get(
-                                                         rtpPacket.payloadType);
-            if (ssrcinfo.currentformat == null)
-            {
-                throw new PartiallyProcessedPacketException(
-                    "No format has been registered for RTP Payload type " +
-                    rtpPacket.payloadType);
-            }
-
-            if (ssrcinfo.dstream != null)
-            {
-                ssrcinfo.dstream.setFormat(ssrcinfo.currentformat);
-            }
+            throw new PartiallyProcessedPacketException(
+                "No format has been registered for RTP Payload type " +
+                rtpPacket.payloadType);
         }
     }
 
+    /**
+     * Check whether the payload type of the current packet is different from
+     * the previous type on this SSRC.  If it's changed, stop the data source
+     * and fire a <tt>RemotePayloadChangeEvent</tt> so that the
+     * <tt>MediaStream</tt> will reprogram the codec chain for the new codec.
+     *
+     * @param rtpPacket The current RTP packet to check
+     * @param ssrcinfo The existing SSRC info
+     */
     private void performMisMatchedPayloadCheck(RTPPacket rtpPacket,
                                                SSRCInfo ssrcinfo)
     {
-        if (ssrcinfo.lastPayloadType != -1
-                && ssrcinfo.lastPayloadType != rtpPacket.payloadType)
+        if (ssrcinfo.lastPayloadType != -1 &&
+            ssrcinfo.lastPayloadType != rtpPacket.payloadType)
         {
             ssrcinfo.currentformat = null;
 
@@ -330,16 +358,17 @@ public class RTPReceiver extends PacketFilter
                     }
 
                     buf.append("]");
-                    
-                    Log.warning("Stopping datasource " + ssrcinfo.dsource.hashCode() + " (used by stream(s) "  + buf.toString() + ")because of payload type "
-                            + "mismatch: expecting pt="
-                            + ssrcinfo.lastPayloadType + ", got pt="
-                            + rtpPacket.payloadType);
+                    Log.warning("Stopping datasource " + ssrcinfo.dsource.hashCode() +
+                        " (used by stream(s) " + buf.toString() +
+                        ")because of payload type mismatch: expecting pt=" +
+                        ssrcinfo.lastPayloadType + ", got pt=" +
+                        rtpPacket.payloadType);
                     ssrcinfo.dsource.stop();
-                } catch (IOException ioexception)
+                }
+                catch (IOException ioexception)
                 {
-                    Log.warning("Problem stopping DataSource after payload change "
-                            + ioexception.getMessage());
+                    Log.warning("Problem stopping DataSource after PT change " +
+                        ioexception.getMessage());
                 }
             }
 
@@ -352,15 +381,60 @@ public class RTPReceiver extends PacketFilter
         }
     }
 
+    /**
+     * Set the format on this SSRC, the data source and the RTP control if we
+     * haven't already.
+     *
+     * @param rtpPacket The current RTP packet to take the format from
+     * @param ssrcinfo The current SSRC info
+     * @throws PartiallyProcessedPacketException
+     */
+    private void setCurrentFormatIfRequired(RTPPacket rtpPacket,
+                                                   SSRCInfo ssrcinfo)
+        throws PartiallyProcessedPacketException
+    {
+        if (ssrcinfo.currentformat == null)
+        {
+            // Update the current format from our cache of valid payload types
+            // for this stream.  We've already checked the payload type is in
+            // the cache in checkPayloadTypeCache().
+            ssrcinfo.currentformat =
+                cache.sm.formatinfo.get(rtpPacket.payloadType);
+            if (ssrcinfo.dstream != null)
+            {
+                Log.info("Setting format on RTPSourceStream to: " +
+                    ssrcinfo.currentformat);
+                ssrcinfo.dstream.setFormat(ssrcinfo.currentformat);
+
+                // And update the format on the RTP control for this data
+                // source.
+                RTPControlImpl rtpControlImpl =
+                    (RTPControlImpl)ssrcinfo.dsource.getControl(controlName);
+                if (rtpControlImpl != null)
+                {
+                    Log.info("Setting format on RTPControl to: " +
+                        ssrcinfo.currentformat);
+                    rtpControlImpl.currentformat = ssrcinfo.currentformat;
+                }
+
+            }
+        }
+    }
+
     private void handleRTCP(RTPPacket rtpPacket)
     {
         if (cache.sm.isUnicast())
+        {
             if (!rtcpstarted)
             {
                 cache.sm.startRTCPReports(((UDPPacket) rtpPacket.base).remoteAddress);
                 rtcpstarted = true;
-                byte abyte0[] = cache.sm.controladdress.getAddress();
-                int k = abyte0[3] & 0xff;
+
+                // XXX Not clear why this code is doing what it is.  It appears
+                // to checking whether the control IP address ends in 255 and
+                // if so, using it.  Otherwise, use the local IP address.
+                byte controlAddress[] = cache.sm.controladdress.getAddress();
+                int k = controlAddress[3] & 0xff;
                 if ((k & 0xff) == 255)
                 {
                     cache.sm.addUnicastAddr(cache.sm.controladdress);
@@ -368,26 +442,31 @@ public class RTPReceiver extends PacketFilter
                 else
                 {
                     InetAddress inetaddress1 = null;
-                    boolean flag2 = true;
+                    boolean haveLocalHost = true;
                     try
                     {
                         inetaddress1 = InetAddress.getLocalHost();
                     } catch (UnknownHostException unknownhostexception)
                     {
-                        flag2 = false;
+                        haveLocalHost = false;
                     }
-                    if (flag2)
+                    if (haveLocalHost)
                         cache.sm.addUnicastAddr(inetaddress1);
                 }
-            } else if (!cache.sm
-                    .isSenderDefaultAddr(((UDPPacket) rtpPacket.base).remoteAddress))
-                cache.sm.addUnicastAddr(((UDPPacket) rtpPacket.base).remoteAddress);
+            }
+            else if (!cache.sm.isSenderDefaultAddr(
+                                    ((UDPPacket) rtpPacket.base).remoteAddress))
+            {
+                cache.sm.addUnicastAddr(
+                    ((UDPPacket) rtpPacket.base).remoteAddress);
+            }
+        }
     }
 
     private void updateStats(RTPPacket rtpPacket, SSRCInfo ssrcinfo)
     {
         int diff = rtpPacket.seqnum - ssrcinfo.maxseq;
-        
+
         if (ssrcinfo.maxseq + 1 != rtpPacket.seqnum && diff > 0)
         {
             ssrcinfo.stats.update(RTPStats.PDULOST, diff - 1);
@@ -399,12 +478,12 @@ public class RTPReceiver extends PacketFilter
         {
             ssrcinfo.stats.update(RTPStats.PDULOST, -1);
         }
-        
+
         if (ssrcinfo.wrapped)
         {
             ssrcinfo.wrapped = false;
         }
-        
+
         if (diff < MAX_DROPOUT)
         {
             if (rtpPacket.seqnum < ssrcinfo.baseseq)
@@ -426,7 +505,7 @@ public class RTPReceiver extends PacketFilter
                 }
             }
             ssrcinfo.maxseq = rtpPacket.seqnum;
-        } 
+        }
         else if (diff <= (65536 - MAX_MISORDER))
         {
             ssrcinfo.stats.update(RTPStats.PDUINVALID);
@@ -434,7 +513,7 @@ public class RTPReceiver extends PacketFilter
                 ssrcinfo.initsource(rtpPacket.seqnum);
             else
                 ssrcinfo.lastbadseq = rtpPacket.seqnum + 1 & 0xffff;
-        } 
+        }
         else
         {
             /*
@@ -475,7 +554,8 @@ public class RTPReceiver extends PacketFilter
         }
     }
 
-    private SSRCInfo getSsrcInfo(RTPPacket rtpPacket) throws FailedToProcessPacketException
+    private SSRCInfo getSsrcInfo(RTPPacket rtpPacket)
+        throws FailedToProcessPacketException
     {
         SSRCInfo ssrcInfo = null;
 
@@ -492,16 +572,24 @@ public class RTPReceiver extends PacketFilter
 
         if (ssrcInfo == null)
         {
-            throw new FailedToProcessPacketException(
-                String.format("Dropping RTP packet because ssrcinfo couldn't be obtained " +
-                              "from the cache network address. seqnum=%s, ssrc=%s",
-                              rtpPacket.seqnum, rtpPacket.ssrc));
+            throw new FailedToProcessPacketException(String.format(
+                "Dropping RTP packet because ssrcinfo couldn't be obtained " +
+                "from the cache network address. seqnum=%s, ssrc=%s",
+                rtpPacket.seqnum, rtpPacket.ssrc));
         }
 
         return ssrcInfo;
     }
 
-    private void checkNetworkAddress(RTPPacket rtppacket) throws FailedToProcessPacketException
+    /**
+     * Check whether this packet is from the expected remote IP address and
+     * discard it if not.
+     *
+     * @param rtppacket The current packet to check
+     * @throws FailedToProcessPacketException
+     */
+    private void checkNetworkAddress(RTPPacket rtppacket)
+        throws FailedToProcessPacketException
     {
         if (rtppacket.base instanceof UDPPacket)
         {
@@ -510,9 +598,9 @@ public class RTPReceiver extends PacketFilter
                     && !cache.sm.isBroadcast(cache.sm.dataaddress)
                     && !inetaddress.equals(cache.sm.dataaddress))
             {
-                throw new FailedToProcessPacketException(
-                  String.format("Dropping RTP packet because of a problem with the " +
-                                "network address. seqnum=%s", rtppacket.seqnum));
+                throw new FailedToProcessPacketException(String.format(
+                    "Dropping RTP packet because of a problem with the " +
+                    "network address. seqnum=%s", rtppacket.seqnum));
             }
         }
     }
