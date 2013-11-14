@@ -94,35 +94,9 @@ public class RTPReceiver extends PacketFilter
     {
         try
         {
-            /*
-             * The following code is for testing only - it allows us to
-             * simulate unexpected RTP packets by changing either:
-             * - the payload type
-             * - the SSRC
-             */
-            int packetsToHack = 0;
-            int hackedPayloadType = 0;
-            int hackedSSRC = -1;//0x12341234;
-            if (numPackets < packetsToHack)
-            {
-                if (hackedPayloadType != -1)
-                {
-                    Log.info("Hacking packet " + rtpPacket.seqnum + " to be PT " + hackedPayloadType);
-                    rtpPacket.payloadType = hackedPayloadType;
-                }
-
-                if (hackedSSRC != -1)
-                {
-                    Log.info("Hacking packet " + rtpPacket.seqnum + " to be SSRC " + hackedSSRC);
-                    rtpPacket.ssrc = hackedSSRC;
-                }
-            }
-            else if ((numPackets == packetsToHack) &&
-                     (numPackets != 0))
-            {
-                Log.info("Stopped hacking packets at seq " + rtpPacket.seqnum);
-            }
-            numPackets++;
+            // Call into this method if you want to do some testing of messing
+            // with the types of packets we're receiving for test purposes.
+            //hackPacketsForTesting(rtpPacket);
 
             /*
              * Now the main processing of the RTPReceiver.  Run through various
@@ -398,6 +372,11 @@ public class RTPReceiver extends PacketFilter
             // Update the current format from our cache of valid payload types
             // for this stream.  We've already checked the payload type is in
             // the cache in checkPayloadTypeCache().
+            //
+            // Note: Payload types never get removed from the cache but it's
+            // possible they may be changed.  Even if they do, we should just
+            // proceed with whatever is currently in the cache and log what
+            // we're doing here.
             ssrcinfo.currentformat =
                 cache.sm.formatinfo.get(rtpPacket.payloadType);
             if (ssrcinfo.dstream != null)
@@ -408,15 +387,17 @@ public class RTPReceiver extends PacketFilter
 
                 // And update the format on the RTP control for this data
                 // source.
-                RTPControlImpl rtpControlImpl =
-                    (RTPControlImpl)ssrcinfo.dsource.getControl(controlName);
-                if (rtpControlImpl != null)
+                if (ssrcinfo.dsource != null)
                 {
-                    Log.info("Setting format on RTPControl to: " +
-                        ssrcinfo.currentformat);
-                    rtpControlImpl.currentformat = ssrcinfo.currentformat;
+                    RTPControlImpl rtpControlImpl =
+                        (RTPControlImpl)ssrcinfo.dsource.getControl(controlName);
+                    if (rtpControlImpl != null)
+                    {
+                        Log.info("Setting format on RTPControl to: " +
+                            ssrcinfo.currentformat);
+                        rtpControlImpl.currentformat = ssrcinfo.currentformat;
+                    }
                 }
-
             }
         }
     }
@@ -603,5 +584,42 @@ public class RTPReceiver extends PacketFilter
                     "network address. seqnum=%s", rtppacket.seqnum));
             }
         }
+    }
+
+    /**
+     * The following code is for testing only - it allows us to
+     * simulate unexpected RTP packets by changing either:
+     * - the payload type
+     * - the SSRC
+     *
+     * @param rtpPacket the current packet to possibly hack
+     */
+    private void hackPacketsForTesting(RTPPacket rtpPacket)
+    {
+        // Change these variables to actually do any packet hacking!
+        int packetsToHack = 0;
+        int hackedPayloadType = -1; // e.g. 0 for G.711 u-law
+        int hackedSSRC = -1; // e.g. 0x12341234
+        if (numPackets < packetsToHack)
+        {
+            if (hackedPayloadType != -1)
+            {
+                Log.info("Hacking packet " + rtpPacket.seqnum + " to be PT " + hackedPayloadType);
+                rtpPacket.payloadType = hackedPayloadType;
+            }
+
+            if (hackedSSRC != -1)
+            {
+                Log.info("Hacking packet " + rtpPacket.seqnum + " to be SSRC " + hackedSSRC);
+                rtpPacket.ssrc = hackedSSRC;
+            }
+        }
+        else if ((numPackets == packetsToHack) &&
+                 (numPackets != 0))
+        {
+            Log.info("Stopped hacking packets at seq " + rtpPacket.seqnum);
+        }
+
+        numPackets++;
     }
 }
