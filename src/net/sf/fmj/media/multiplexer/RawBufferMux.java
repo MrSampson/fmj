@@ -261,14 +261,13 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
 
             Buffer current = null;
 
-            // we shouldn't need to wait for data here since we were
-            // notified of data being available before. But just to
-            // be safe.
-            // TODO update comment. In fact, we don't necessarily expect to have
-            // data here - the read() request is triggered off a push from the
-            // capture device, and doesn't necessarily mean all input streams
-            // will have data available (normally yes - we have a jitter buffer
-            // etc - but maybe no).
+            /*
+             * We don't necessarily expect to have data here - the read()
+             * request is triggered off a push from the capture device, and
+             * doesn't necessarily mean all input streams will have data
+             * available (normally yes - we have a jitter buffer etc. - but
+             * maybe no).
+             */
             synchronized (bufferQ)
             {
             	if (bufferQ.canRead()) {
@@ -319,7 +318,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
             {
                 while (bufferQ.canRead())
                 {
-                    Buffer b = bufferQ.read();
+                    bufferQ.read();
                     bufferQ.readReport();
                 }
                 bufferQ.notifyAll();

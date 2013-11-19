@@ -46,6 +46,7 @@ public abstract class LoopThread extends MediaThread
 
     public synchronized void kill()
     {
+    	Log.annotate(this, "Kill");
         killed = true;
         notifyAll();
     }
@@ -58,6 +59,7 @@ public abstract class LoopThread extends MediaThread
      */
     public synchronized void pause()
     {
+    	Log.annotate(this, "Pause");
         paused = true;
     }
 
@@ -77,6 +79,7 @@ public abstract class LoopThread extends MediaThread
          * example, it may set the priority of this thread.
          */
         super.run();
+        Log.annotate(this, "Run");
 
         for (;;)
         {
@@ -96,6 +99,7 @@ public abstract class LoopThread extends MediaThread
             }
         }
 
+        Log.annotate(this, "Stop");
     }
 
     /**
@@ -109,6 +113,7 @@ public abstract class LoopThread extends MediaThread
         {
             super.start();
             started = true;
+            Log.annotate(this, "Start");
         }
         paused = false;
         notifyAll();
