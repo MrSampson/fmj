@@ -79,7 +79,7 @@ public class ProcessEngine extends PlaybackEngine
 
                     if ((node = buildGraph(candidates)) == null)
                     {
-                        Log.error("The input format is not compatible with the given codec plugin: "
+                        Log.error("The input format (" + in + ") is not compatible with the given codec plugin: "
                                 + codecs[i]);
                         indent = 0;
                         Log.setIndent(indent);
