@@ -1131,6 +1131,7 @@ class RealizeWorkThread extends StateTransitionWorkThread
     {
         controller = mc;
         setName(getName() + ": " + mc);
+        Log.annotate(this, "RealizeWorkThread created, name: " + getName());
     }
 
     @Override

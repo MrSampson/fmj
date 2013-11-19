@@ -284,6 +284,7 @@ public class DataSource extends BasicPushBufferDataSource implements
     {
         super.stop();
         Log.annotate(this, "stop");
+        
         // stop your child source as well
         if (childsrc != null)
             childsrc.stop();
