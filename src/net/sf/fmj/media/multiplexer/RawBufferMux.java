@@ -270,11 +270,13 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
              */
             synchronized (bufferQ)
             {
-            	if (bufferQ.canRead()) {
-            		current = bufferQ.read();
+            	if (bufferQ.canRead())
+            	{
+            	    current = bufferQ.read();
             	}
-            	else {
-            		Log.error("Had no data to read");
+            	else
+            	{
+            	    Log.annotate(this, "Had no data to read");
             	}
             }
 
