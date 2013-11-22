@@ -336,6 +336,7 @@ public abstract class BasicController implements Controller, Duration
         {
             // It's illegal to use deallocate on a started controller, but we
             // can handle this rather than falling over.
+            Log.annotate(this, "deallocate called on started controller");
             Log.dumpStack(new ClockStartedError(DeallocateError));
             this.stop();
         }
