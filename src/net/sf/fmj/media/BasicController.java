@@ -332,10 +332,12 @@ public abstract class BasicController implements Controller, Duration
     final public void deallocate()
     {
         int previousState = getState();
-        // It's illegal to use deallocate on a started controller.
         if (state == Started)
         {
-            throwError(new ClockStartedError(DeallocateError));
+            // It's illegal to use deallocate on a started controller, but we
+            // can handle this rather than falling over.
+            Log.dumpStack(new ClockStartedError(DeallocateError));
+            this.stop();
         }
 
         // stop the thread even if isAlive() is false as
