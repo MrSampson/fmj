@@ -261,48 +261,53 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
 
             Buffer current = null;
 
-            // we shouldnt need to wait for data here since we were
-            // notified of data being available before. But just to
-            // be safe.
+            /*
+             * We don't necessarily expect to have data here - the read()
+             * request is triggered off a push from the capture device, and
+             * doesn't necessarily mean all input streams will have data
+             * available (normally yes - we have a jitter buffer etc. - but
+             * maybe no).
+             */
             synchronized (bufferQ)
             {
-                while (!bufferQ.canRead())
-                {
-                    try
-                    {
-                        bufferQ.wait();
-                    } catch (Exception e)
-                    {
-                    }
-                }
-                current = bufferQ.read();
+            	if (bufferQ.canRead())
+            	{
+            	    current = bufferQ.read();
+            	}
+            	else
+            	{
+            	    Log.annotate(this, "Had no data to read");
+            	}
             }
 
-            if (current.isEOM())
+            if (current != null)
             {
-                synchronized (drainSync)
-                {
-                    if (draining)
-                    {
-                        draining = false;
-                        drainSync.notifyAll();
-                    }
-                }
-            }
-
-            // Copy all the attributes from current to buffer.
-            Object data = buffer.getData();
-            Object hdr = buffer.getHeader();
-            buffer.copy(current);
-            current.setData(data);
-            current.setHeader(hdr);
-
-            // return this buffer as being a free buffer
-            synchronized (bufferQ)
-            {
-                hasRead = true;
-                bufferQ.readReport();
-                bufferQ.notifyAll();
+	            if (current.isEOM())
+	            {
+	                synchronized (drainSync)
+	                {
+	                    if (draining)
+	                    {
+	                        draining = false;
+	                        drainSync.notifyAll();
+	                    }
+	                }
+	            }
+	
+	            // Copy all the attributes from current to buffer.
+	            Object data = buffer.getData();
+	            Object hdr = buffer.getHeader();
+	            buffer.copy(current);
+	            current.setData(data);
+	            current.setHeader(hdr);
+	
+	            // return this buffer as being a free buffer
+	            synchronized (bufferQ)
+	            {
+	                hasRead = true;
+	                bufferQ.readReport();
+	                bufferQ.notifyAll();
+	            }
             }
         }
 
@@ -315,7 +320,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
             {
                 while (bufferQ.canRead())
                 {
-                    Buffer b = bufferQ.read();
+                    bufferQ.read();
                     bufferQ.readReport();
                 }
                 bufferQ.notifyAll();

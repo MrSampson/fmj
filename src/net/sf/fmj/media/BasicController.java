@@ -332,10 +332,13 @@ public abstract class BasicController implements Controller, Duration
     final public void deallocate()
     {
         int previousState = getState();
-        // It's illegal to use deallocate on a started controller.
         if (state == Started)
         {
-            throwError(new ClockStartedError(DeallocateError));
+            // It's illegal to use deallocate on a started controller, but we
+            // can handle this rather than falling over.
+            Log.annotate(this, "deallocate called on started controller");
+            Log.dumpStack(new ClockStartedError(DeallocateError));
+            this.stop();
         }
 
         // stop the thread even if isAlive() is false as
@@ -1131,6 +1134,7 @@ class RealizeWorkThread extends StateTransitionWorkThread
     {
         controller = mc;
         setName(getName() + ": " + mc);
+        Log.annotate(this, "RealizeWorkThread created, name: " + getName());
     }
 
     @Override
