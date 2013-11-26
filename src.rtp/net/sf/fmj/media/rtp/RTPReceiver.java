@@ -108,7 +108,7 @@ public class RTPReceiver extends PacketFilter
              * indicating the packet should be discarded.  These exceptions are
              * handled and logged below.
              */
-            Log.comment("Received RTP packet (seq " + rtpPacket.seqnum + ")");
+            //Log.comment("Received RTP packet (seq " + rtpPacket.seqnum + ")");
             handleUnsupportedPayloadType(rtpPacket);
             checkNetworkAddress(rtpPacket);
             SSRCInfo ssrcinfo = getSsrcInfo(rtpPacket);
