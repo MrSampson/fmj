@@ -68,14 +68,25 @@ public class Log
     }
 
     static HashMap<Object, int[]> packetTracker = new HashMap<Object, int[]>();
-    static int LOG_FIRST_N_READS = 10;
-    static int LOG_EACH_NTH_READ_1 = 50;
-    static int LOG_PHASE_1_TO_N_READS = 500;
-    static int LOG_EACH_NTH_READ_2 = 500;
+    static int LOG_READ_MAX_INTERVAL = 1024;
+    
+    /**
+     * Log that this object has read a packet (or other chunk of data).  Logs
+     * are made increasingly rarely as the call progresses.
+     * @param obj The object making the call (so call as <tt>logRead(this)</tt>)
+     */
     public static synchronized void logRead(Object obj)
     {
         logReadBytes(obj, 0, false);
     }
+    
+    /**
+     * Log that this object has read a packet (or other chunk of data).  Logs
+     * are made increasingly rarely as the call progresses.
+     * @param obj The object making the call (so call as 
+     * <tt>logRead(this, nBytes)</tt>)
+     * @param nBytes The number of bytes that were read
+     */
     public static synchronized void logReadBytes(Object obj, int nBytes)
     {
         logReadBytes(obj, nBytes, true);
@@ -84,36 +95,33 @@ public class Log
     private static synchronized void logReadBytes(Object obj, int nBytes,
                                                                boolean logBytes)
     {
-        if (isEnabled && logger.isLoggable(Level.INFO))
+        if (isEnabled && logger.isLoggable(Level.FINEST))
         {
             int[] thisData = packetTracker.get(obj);
             if (thisData == null)
             {
-                thisData = new int[2];
-                thisData[0] = thisData[1] = 0;
+                thisData = new int[3];
+                thisData[0] = 0; // Number of times we've been called for this object
+                thisData[1] = 0; // Total number of bytes read
+                thisData[2] = 1; // First packet to log
             }
             
             int nCalled = thisData[0] + 1;
             int totalBytes = thisData[1] + nBytes;
+            int nextCallToLog = thisData[2];
+            
+            if (nCalled >= nextCallToLog)
+            {
+                logger.finest("logReadBytes called " + nCalled + " times " +
+                    (logBytes ? "(" + totalBytes + " bytes total) " : "") +
+                                                                 "from " + obj);
+                thisData[2] = (nextCallToLog < LOG_READ_MAX_INTERVAL) ?
+                  (2 * nextCallToLog) : (LOG_READ_MAX_INTERVAL + nextCallToLog);
+            }
+
             thisData[0] = nCalled;
             thisData[1] = totalBytes;
             packetTracker.put(obj, thisData);
-            
-            // Only log: the first 10 packets; then every 50th packet up to
-            // 500; and then every 500th thereafter.
-            if ((nCalled <= LOG_FIRST_N_READS) ||
-                ((nCalled <= LOG_PHASE_1_TO_N_READS) &&
-                 ((nCalled % LOG_EACH_NTH_READ_1) == 0)) ||
-                ((nCalled % LOG_EACH_NTH_READ_2) == 0))
-            {
-                String byteStr;
-                if (logBytes)
-                    byteStr = "(" + totalBytes + " bytes total) "; 
-                else
-                    byteStr = "";
-                logger.info("logReadBytes called " + nCalled + " times " +
-                                                byteStr + "from " + obj + "\n");
-            }
         }
     }
     

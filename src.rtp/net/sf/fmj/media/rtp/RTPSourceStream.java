@@ -337,7 +337,7 @@ public class RTPSourceStream
             try
             {
                 behaviour.read(buffer);
-                /* TODO SGD */ Log.logRead(this);
+                Log.logRead(this);
 
                 if (!buffer.isDiscard())
                     lastSeqSent = buffer.getSequenceNumber();
