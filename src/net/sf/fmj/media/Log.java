@@ -67,6 +67,56 @@ public class Log
         }
     }
 
+    static HashMap<Object, int[]> packetTracker = new HashMap<Object, int[]>();
+    static int LOG_FIRST_N_READS = 10;
+    static int LOG_EACH_NTH_READ_1 = 50;
+    static int LOG_PHASE_1_TO_N_READS = 500;
+    static int LOG_EACH_NTH_READ_2 = 500;
+    public static synchronized void logRead(Object obj)
+    {
+        logReadBytes(obj, 0, false);
+    }
+    public static synchronized void logReadBytes(Object obj, int nBytes)
+    {
+        logReadBytes(obj, nBytes, true);
+    }
+    
+    private static synchronized void logReadBytes(Object obj, int nBytes,
+                                                               boolean logBytes)
+    {
+        if (isEnabled && logger.isLoggable(Level.INFO))
+        {
+            int[] thisData = packetTracker.get(obj);
+            if (thisData == null)
+            {
+                thisData = new int[2];
+                thisData[0] = thisData[1] = 0;
+            }
+            
+            int nCalled = thisData[0] + 1;
+            int totalBytes = thisData[1] + nBytes;
+            thisData[0] = nCalled;
+            thisData[1] = totalBytes;
+            packetTracker.put(obj, thisData);
+            
+            // Only log: the first 10 packets; then every 50th packet up to
+            // 500; and then every 500th thereafter.
+            if ((nCalled <= LOG_FIRST_N_READS) ||
+                ((nCalled <= LOG_PHASE_1_TO_N_READS) &&
+                 ((nCalled % LOG_EACH_NTH_READ_1) == 0)) ||
+                ((nCalled % LOG_EACH_NTH_READ_2) == 0))
+            {
+                String byteStr;
+                if (logBytes)
+                    byteStr = "(" + totalBytes + " bytes total) "; 
+                else
+                    byteStr = "";
+                logger.info("logReadBytes called " + nCalled + " times " +
+                                                byteStr + "from " + obj + "\n");
+            }
+        }
+    }
+    
     public static synchronized void error(Object str)
     {
         if (isEnabled && logger.isLoggable(Level.SEVERE))
