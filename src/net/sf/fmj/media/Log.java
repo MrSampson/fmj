@@ -1,6 +1,7 @@
 package net.sf.fmj.media;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.*;
 
 /**
@@ -67,7 +68,10 @@ public class Log
         }
     }
 
-    static HashMap<Object, int[]> packetTracker = new HashMap<Object, int[]>();
+    // Data on how many packets have been seen by various objects in the media
+    // stream.
+    static ConcurrentHashMap<Integer, int[]> packetTracker =
+                                        new ConcurrentHashMap<Integer, int[]>();
     static int LOG_READ_MAX_INTERVAL = 1024;
     
     /**
@@ -92,12 +96,16 @@ public class Log
         logReadBytes(obj, nBytes, true);
     }
     
+    // This method contains a small per-call memory leak - we never remove
+    // the per-object data from the hashMap.  Since the amount of leaked data is
+    // very small (~10b per object) that's OK, but if we ever beef this up we
+    // should add some removal code as well.
     private static synchronized void logReadBytes(Object obj, int nBytes,
                                                                boolean logBytes)
     {
         if (isEnabled && logger.isLoggable(Level.FINEST))
         {
-            int[] thisData = packetTracker.get(obj);
+            int[] thisData = packetTracker.get(obj.hashCode());
             if (thisData == null)
             {
                 thisData = new int[3];
@@ -121,7 +129,7 @@ public class Log
 
             thisData[0] = nCalled;
             thisData[1] = totalBytes;
-            packetTracker.put(obj, thisData);
+            packetTracker.put(obj.hashCode(), thisData);
         }
     }
     
