@@ -300,7 +300,6 @@ public class BasicSourceModule extends BasicModule implements Duration,
 
         try
         {
-            parser.start();
             tracks = parser.getTracks();
         } catch (BadHeaderException e)
         {
@@ -335,16 +334,9 @@ public class BasicSourceModule extends BasicModule implements Duration,
             registerOutputConnector(tracks[i].toString(), oc);
             loops[i] = null;
         }
-
+        
         engine = (PlaybackEngine) getController();
-
-        // For RTP, we don't stop the parser. This prevents
-        // the RTP buffer Q from being flushed. Flushing the
-        // buffer Q will flush the initial chunks of data. That's
-        // bad for H.261 which requires the initial key frame.
-        if (engine == null || !engine.isRTP())
-            parser.stop();
-
+        
         return true;
     }
 

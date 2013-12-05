@@ -344,7 +344,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
     static String STARTED_ERROR = "cannot be called after started";
 
     /**
-     * Turn on memory trace to assit debugging.
+     * Turn on memory trace to assist debugging.
      */
     static public void setMemoryTrace(boolean on)
     {
@@ -485,6 +485,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
             {
                 if (waitPrefetched.contains(src))
                     waitPrefetched.removeElement(src);
+                
                 if (waitPrefetched.isEmpty())
                 {
                     // All sinks are prefetched. Wake up the
@@ -1157,7 +1158,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
                 trackControls[i].prError();
             }
 
-            // Check for interrupt after a critcial section.
+            // Check for interrupt after a critical section.
             if (isInterrupted())
             {
                 Log.error(realizeError);

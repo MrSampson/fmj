@@ -492,17 +492,17 @@ public class RawPushBufferParser extends RawStreamParser
 
         public void readFrame(Buffer buffer)
         {
-            // Retrieve a filled buffer.
-            if (stopped)
-            {
-                buffer.setDiscard(true);
-                buffer.setFormat(format);
-                return;
-            }
-
             Buffer filled;
             synchronized (bufferQ)
             {
+                // Retrieve a filled buffer.
+                if (stopped)
+                {
+                    buffer.setDiscard(true);
+                    buffer.setFormat(format);
+                    return;
+                }
+
                 while (!bufferQ.canRead())
                 {
                     try
@@ -583,7 +583,7 @@ public class RawPushBufferParser extends RawStreamParser
             // we basically need to ensure that readFrame will return
             // immediately.and also make sure that if it is called in
             // the stopped state, it returns w/o blocking.
-            Log.annotate(this, "Start");
+            Log.annotate(this, "Stop");
             synchronized (bufferQ)
             {
                 stopped = true;
