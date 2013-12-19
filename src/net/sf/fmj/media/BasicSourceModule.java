@@ -334,9 +334,9 @@ public class BasicSourceModule extends BasicModule implements Duration,
             registerOutputConnector(tracks[i].toString(), oc);
             loops[i] = null;
         }
-        
+
         engine = (PlaybackEngine) getController();
-        
+
         return true;
     }
 
