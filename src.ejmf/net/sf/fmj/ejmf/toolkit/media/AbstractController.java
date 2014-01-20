@@ -6,6 +6,7 @@ import java.util.logging.*;
 import javax.media.*;
 
 import net.sf.fmj.ejmf.toolkit.controls.*;
+import net.sf.fmj.media.Log;
 import net.sf.fmj.utility.*;
 
 /**
@@ -52,14 +53,14 @@ import net.sf.fmj.utility.*;
  * <LI>doSetMediaTime()</LI>
  * <LI>doSetRate()</LI>
  * </UL>
- * 
+ *
  * <p>
  * From the book: Essential JMF, Gordon, Talley (ISBN 0130801046). Used with
  * permission.
  * </p>
- * 
+ *
  * @see AbstractPlayer
- * 
+ *
  * @author Steve Talley
  */
 
@@ -113,7 +114,7 @@ public abstract class AbstractController extends AbstractClock implements
 
     /**
      * Add a Control to this Controller.
-     * 
+     *
      * @param newControl
      *            The Control to add.
      */
@@ -130,10 +131,11 @@ public abstract class AbstractController extends AbstractClock implements
 
     /**
      * Specify a ControllerListener to which this Controller will send events.
-     * 
+     *
      * @param listener
      *            The listener to which the Controller will post events.
      */
+    @Override
     public void addControllerListener(ControllerListener listener)
     {
         synchronized (listeners)
@@ -188,6 +190,7 @@ public abstract class AbstractController extends AbstractClock implements
      * Close the Controller. Release resources held by this Controller.
      * Subclasses should implement doClose() to add additional functionality.
      */
+    @Override
     public synchronized final void close()
     {
         // Stop the Controller in case it is Started
@@ -214,6 +217,7 @@ public abstract class AbstractController extends AbstractClock implements
      * <p>
      * Synchronous method -- return when transition complete
      */
+    @Override
     public final synchronized void deallocate()
     {
         int state;
@@ -221,8 +225,12 @@ public abstract class AbstractController extends AbstractClock implements
         // Enforce state prereq
         if (currentState == Started)
         {
-            throw new ClockStartedError(
-                    "deallocate() cannot be called on a started Controller");
+            // It's illegal to use deallocate on a started controller, but we
+            // can handle this rather than falling over.
+            Log.annotate(this, "Deallocate called on started controller");
+            Log.dumpStack(new ClockStartedError(
+                      "deallocate() cannot be called on a started Controller"));
+            this.stop();
         }
 
         // Kill any forward-transitioning thread
@@ -293,7 +301,7 @@ public abstract class AbstractController extends AbstractClock implements
      * Implement to deallocate the Controller.
      * <p>
      * This method should not be called directly. Instead, call prefetch().
-     * 
+     *
      * @return True if successful, false otherwise.
      */
     public abstract boolean doDeallocate();
@@ -302,7 +310,7 @@ public abstract class AbstractController extends AbstractClock implements
      * Implement to prefetch the Controller.
      * <p>
      * This method should not be called directly. Instead, call prefetch().
-     * 
+     *
      * @return True if successful, false otherwise.
      */
     public abstract boolean doPrefetch();
@@ -317,7 +325,7 @@ public abstract class AbstractController extends AbstractClock implements
      * Implement to realize the Controller.
      * <p>
      * This method should not be called directly. Instead, call realize().
-     * 
+     *
      * @return True if successful, false otherwise.
      */
     public abstract boolean doRealize();
@@ -328,7 +336,7 @@ public abstract class AbstractController extends AbstractClock implements
      * that the given time is within the Controller's duration.
      * <p>
      * This method should not be called directly. Instead, call setMediaTime().
-     * 
+     *
      * @param t
      *            The media time to set
      */
@@ -339,10 +347,10 @@ public abstract class AbstractController extends AbstractClock implements
      * method is called, it is guaranteed that the Controller is Stopped.
      * <p>
      * This method should not be called directly. Instead, call setRate().
-     * 
+     *
      * @param rate
      *            The requested rate to set
-     * 
+     *
      * @return The actual rate that was set
      */
     public abstract float doSetRate(float rate);
@@ -351,7 +359,7 @@ public abstract class AbstractController extends AbstractClock implements
      * Implement to stop the Controller.
      * <p>
      * This method should not be called directly. Instead, call stop().
-     * 
+     *
      * @return True if successful, false otherwise.
      */
     public abstract boolean doStop();
@@ -360,7 +368,7 @@ public abstract class AbstractController extends AbstractClock implements
      * Implement to start the Controller.
      * <p>
      * This method should not be called directly. Instead, call syncStart().
-     * 
+     *
      * @return True if successful, false otherwise.
      */
     public abstract boolean doSyncStart(Time t);
@@ -369,7 +377,7 @@ public abstract class AbstractController extends AbstractClock implements
      * Indicates to the framework that the end of media has been reached. Marks
      * the media time, sets the current and target states to Prefetched, and
      * posts an EndOfMediaEvent.
-     * 
+     *
      * @exception ClockStoppedException
      *                If the AbstractController is not in the Started state.
      */
@@ -400,10 +408,11 @@ public abstract class AbstractController extends AbstractClock implements
      * Get the Control that supports the class or interface specified. The full
      * class or interface name should be specified. Null is returned if the
      * Control is not supported.
-     * 
+     *
      * @return Control for the given class or interface name, or null if no such
      *         Control is supported.
      */
+    @Override
     public Control getControl(String forName)
     {
         Class<?> c;
@@ -440,10 +449,11 @@ public abstract class AbstractController extends AbstractClock implements
     /**
      * Get a list of the Control objects that this Controller supports. If there
      * are no controls, an array of length zero is returned.
-     * 
+     *
      * @return A list of Controller Controls.
-     * 
+     *
      */
+    @Override
     public Control[] getControls()
     {
         Control[] array;
@@ -459,6 +469,7 @@ public abstract class AbstractController extends AbstractClock implements
      * Returns DURATION_UNKNOWN. This method should be overridden to report a
      * more precise duration.
      */
+    @Override
     public Time getDuration()
     {
         return DURATION_UNKNOWN;
@@ -467,7 +478,7 @@ public abstract class AbstractController extends AbstractClock implements
     /**
      * Calculates the current media time based on the current time-base time,
      * the time-base start time, the media start time, and the rate.
-     * 
+     *
      * @return The current media time
      */
     @Override
@@ -498,6 +509,7 @@ public abstract class AbstractController extends AbstractClock implements
      * Returns LATENCY_UNKNOWN. This method should be overridden to report a
      * more precise start latency.
      */
+    @Override
     public Time getStartLatency()
     {
         if (currentState == Unrealized || currentState == Realizing)
@@ -512,6 +524,7 @@ public abstract class AbstractController extends AbstractClock implements
     /**
      * Get the current state of this Controller.
      */
+    @Override
     public int getState()
     {
         return currentState;
@@ -520,6 +533,7 @@ public abstract class AbstractController extends AbstractClock implements
     /**
      * Get the target state of this Controller.
      */
+    @Override
     public int getTargetState()
     {
         return targetState;
@@ -618,7 +632,7 @@ public abstract class AbstractController extends AbstractClock implements
 
     /**
      * Post a ControllerEvent to the Media Event Queue
-     * 
+     *
      * @param event
      *            The ControllerEvent to post.
      */
@@ -745,6 +759,7 @@ public abstract class AbstractController extends AbstractClock implements
      * Asynchronous method -- Start synchronous transition on another thread and
      * return ASAP.
      */
+    @Override
     public final synchronized void prefetch()
     {
         // Has this state already been reached?
@@ -788,6 +803,7 @@ public abstract class AbstractController extends AbstractClock implements
      * Asynchronous method -- Start synchronous transition on another thread and
      * return ASAP.
      */
+    @Override
     public final synchronized void realize()
     {
         // Has this state already been reached?
@@ -821,7 +837,7 @@ public abstract class AbstractController extends AbstractClock implements
 
     /**
      * Remove a Control from this Controller.
-     * 
+     *
      * @param oldControl
      *            The Control to remove.
      */
@@ -832,12 +848,13 @@ public abstract class AbstractController extends AbstractClock implements
 
     /**
      * Remove the specified listener from this Controller's listener list.
-     * 
+     *
      * @param listener
      *            The listener that has been receiving events from this
      *            Controller.
-     * 
+     *
      */
+    @Override
     public void removeControllerListener(ControllerListener listener)
     {
         synchronized (listeners)
@@ -848,13 +865,13 @@ public abstract class AbstractController extends AbstractClock implements
 
     /**
      * Sets the media time.
-     * 
+     *
      * @param t
      *            The media time to set
-     * 
+     *
      * @exception NotRealizedError
      *                If the Controller is not Realized.
-     * 
+     *
      * @exception ClockStartedError
      *                If the Controller is Started.
      */
@@ -899,18 +916,18 @@ public abstract class AbstractController extends AbstractClock implements
      * requested value as possible, but are not required to set the rate to the
      * exact value of any argument other than 1.0. A <tt>Clock</tt> is only
      * guaranteed to set its rate exactly to 1.0.
-     * 
+     *
      * @param rate
      *            The temporal scale factor (rate) to set.
-     * 
+     *
      * @exception NotRealizedError
      *                If the Controller is not Realized.
-     * 
+     *
      * @exception ClockStartedError
      *                If the Controller is Started.
-     * 
+     *
      * @return The actual rate set.
-     * 
+     *
      */
     @Override
     public synchronized float setRate(float rate)
@@ -969,14 +986,14 @@ public abstract class AbstractController extends AbstractClock implements
      * Sets the stop time for this AbstractController. Posts a
      * StopTimeChangeEvent if the stop time given is different than the current
      * stop time.
-     * 
+     *
      * @param mediaStopTime
      *            The time at which you want the <tt>Clock</tt> to stop, in
      *            <i>media time</i>.
-     * 
+     *
      * @exception NotRealizedError
      *                If the Controller is not Realized.
-     * 
+     *
      * @exception ClockStartedError
      *                If the Controller is Started.
      */
@@ -1019,11 +1036,11 @@ public abstract class AbstractController extends AbstractClock implements
      * A <tt>Clock</tt> has a default <tt>TimeBase</tt> that is determined by
      * the implementation. To reset a <tt>Clock</tt> to its default
      * <tt>TimeBase</tt>, call <tt>setTimeBase(null)</tt>.
-     * 
+     *
      * @param timebase
      *            The new <tt>TimeBase</tt> or <tt>null</tt> to reset the
      *            <tt>Clock</tt> to its default <tt>TimeBase</tt>.
-     * 
+     *
      * @exception IncompatibleTimeBaseException
      *                Thrown if the <tt>Clock</tt> can't use the specified
      *                <tt>TimeBase</tt>.
@@ -1101,10 +1118,10 @@ public abstract class AbstractController extends AbstractClock implements
      * returns true, then the Controller is placed in the Prefetched state and a
      * StopEvent is posted. If doStop() returns false, it is assumed that the
      * controller has posted a ControllerErrorEvent detailing the reasons for
-     * it's failure.
+     * its failure.
      * <p>
      * Synchronous method -- return when transition complete
-     * 
+     *
      * @return boolean indicating whether the stop was successful.
      */
     protected synchronized boolean stopController()

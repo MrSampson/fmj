@@ -17,7 +17,7 @@ import net.sf.fmj.media.util.*;
  * <li>Two ThreadedEventQueues for incoming and outgoing ControllerEvents.
  * </ul>
  * <p>
- * 
+ *
  * @version 1.9, 98/11/19
  */
 public abstract class BasicController implements Controller, Duration
@@ -47,7 +47,7 @@ public abstract class BasicController implements Controller, Duration
      * time-base-time will be computed with the given time base. The subclass
      * should implement and further specialized this method to do the real work.
      * But it should also invoke this method to maintain the correct states.
-     * 
+     *
      * @param tb
      *            the time base to set to.
      * @exception IncompatibleTimeBaseException
@@ -61,7 +61,7 @@ public abstract class BasicController implements Controller, Duration
      * It starts a wait thread to wait for the given tbt. At tbt, it will wake
      * up and call doStart(). A subclass should implement the doStart() method
      * to do the real work.
-     * 
+     *
      * @param tbt
      *            the timebase time to start the controller.
      */
@@ -72,7 +72,7 @@ public abstract class BasicController implements Controller, Duration
      * states. The subclass should implement and further specialized this method
      * to do the real work. But it should also invoke this method to maintain
      * the correct states.
-     * 
+     *
      * @param t
      *            the time to stop.
      */
@@ -83,7 +83,7 @@ public abstract class BasicController implements Controller, Duration
      * states. The subclass should implement and further specialized this method
      * to do the real work. But it should also invoke this method to maintain
      * the correct states.
-     * 
+     *
      * @param now
      *            the media time to set to.
      */
@@ -91,7 +91,7 @@ public abstract class BasicController implements Controller, Duration
 
     /**
      * Get the current time base.
-     * 
+     *
      * @return the current time base.
      */
     static String GetTimeBaseError = "Cannot get Time Base from an unrealized controller";
@@ -105,7 +105,7 @@ public abstract class BasicController implements Controller, Duration
      * doSetRate method, subclass Conrollers can support negative rates,
      * fractional rates etc., but they should guard against illegal rates from
      * going into the clock calculations.
-     * 
+     *
      * @param factor
      *            the rate to set to.
      * @return the actual rate used.
@@ -115,7 +115,7 @@ public abstract class BasicController implements Controller, Duration
     /**
      * Returns the start latency. Don't know until the particular node is
      * implemented.
-     * 
+     *
      * @return the start latency.
      */
     static String LatencyError = "Cannot get start latency from an unrealized controller";
@@ -124,7 +124,7 @@ public abstract class BasicController implements Controller, Duration
      * Release the resouces held by the controller. It obeys strict rules as
      * specified in the spec. Implement the abortRealize and abortPrefetch
      * methods to actually do the work.
-     * 
+     *
      * This is a blocking call. It returns only when the Controller has done
      * deallocating the resources. This should be called from an external thread
      * outside of the controller. Take caution if this is being call from inside
@@ -191,6 +191,7 @@ public abstract class BasicController implements Controller, Duration
      * this controller's event. This needs to be a synchronized method so as to
      * maintain the integrity of the listenerList.
      */
+    @Override
     final public void addControllerListener(ControllerListener listener)
     {
         if (listenerList == null)
@@ -222,6 +223,7 @@ public abstract class BasicController implements Controller, Duration
      * A subclass of this implement close to stop all threads to make it
      * "finalizable", i.e., ready to be garbage collected.
      */
+    @Override
     final public void close()
     {
         doClose();
@@ -329,6 +331,7 @@ public abstract class BasicController implements Controller, Duration
         }
     }
 
+    @Override
     final public void deallocate()
     {
         int previousState = getState();
@@ -336,7 +339,7 @@ public abstract class BasicController implements Controller, Duration
         {
             // It's illegal to use deallocate on a started controller, but we
             // can handle this rather than falling over.
-            Log.annotate(this, "deallocate called on started controller");
+            Log.annotate(this, "Deallocate called on started controller");
             Log.dumpStack(new ClockStartedError(DeallocateError));
             this.stop();
         }
@@ -491,7 +494,7 @@ public abstract class BasicController implements Controller, Duration
      * Secondly if this is synchronized, then other synchronized methods,
      * deallocate() and processEvent() will be blocked since they are
      * synchronized methods. Override this to implement subclass behavior.
-     * 
+     *
      * @return true if successful.
      */
     protected abstract boolean doPrefetch();
@@ -510,7 +513,7 @@ public abstract class BasicController implements Controller, Duration
      * Secondly if this is synchronized, then other synchronized methods,
      * deallocate() and processEvent() will be blocked since they are
      * synchronized methods. Override this to implement subclass behavior.
-     * 
+     *
      * @return true if successful.
      */
     protected abstract boolean doRealize();
@@ -551,9 +554,10 @@ public abstract class BasicController implements Controller, Duration
      * Get the <tt>Control</tt> that supports the class or interface specified.
      * The full class or interface name should be specified. <tt>Null</tt> is
      * returned if the <tt>Control</tt> is not supported.
-     * 
+     *
      * @return <tt>Control</tt> for the class or interface name.
      */
+    @Override
     public Control getControl(String type)
     {
         Class<?> cls;
@@ -576,9 +580,10 @@ public abstract class BasicController implements Controller, Duration
     /**
      * Return a list of <b>Control</b> objects this <b>Controller</b> supports.
      * If there are no controls, then an array of length zero is returned.
-     * 
+     *
      * @return list of <b>Controller</b> controls.
      */
+    @Override
     public Control[] getControls()
     {
         // Not implemented $$$
@@ -589,9 +594,10 @@ public abstract class BasicController implements Controller, Duration
     /**
      * Return the duration of the media. It's unknown until we implement a
      * particular node.
-     * 
+     *
      * @return the duration of the media.
      */
+    @Override
     public Time getDuration()
     {
         return Duration.DURATION_UNKNOWN;
@@ -599,9 +605,10 @@ public abstract class BasicController implements Controller, Duration
 
     /**
      * Get the current media time in nanoseconds.
-     * 
+     *
      * @return the media time in nanoseconds.
      */
+    @Override
     public long getMediaNanoseconds()
     {
         return clock.getMediaNanoseconds();
@@ -610,9 +617,10 @@ public abstract class BasicController implements Controller, Duration
     /**
      * Return the current media time. Uses the clock to do the computation. A
      * subclass can override this method to do the right thing for itself.
-     * 
+     *
      * @return the current media time.
      */
+    @Override
     public Time getMediaTime()
     {
         return clock.getMediaTime();
@@ -620,14 +628,16 @@ public abstract class BasicController implements Controller, Duration
 
     /**
      * Get the current presentation speed.
-     * 
+     *
      * @return the current presentation speed.
      */
+    @Override
     public float getRate()
     {
         return clock.getRate();
     }
 
+    @Override
     public Time getStartLatency()
     {
         if (state < Realized)
@@ -639,9 +649,10 @@ public abstract class BasicController implements Controller, Duration
 
     /**
      * Get the current state of the controller.
-     * 
+     *
      * @return the current state of the controller.
      */
+    @Override
     final public int getState()
     {
         return state;
@@ -649,9 +660,10 @@ public abstract class BasicController implements Controller, Duration
 
     /**
      * Get the preset stop time.
-     * 
+     *
      * @return the preset stop time.
      */
+    @Override
     public Time getStopTime()
     {
         return clock.getStopTime();
@@ -660,6 +672,7 @@ public abstract class BasicController implements Controller, Duration
     /**
      * Return the Sync Time. Not yet implementated.
      */
+    @Override
     public Time getSyncTime()
     {
         return new Time(0);
@@ -667,14 +680,16 @@ public abstract class BasicController implements Controller, Duration
 
     /**
      * Get the current target state.
-     * 
+     *
      * @return the current target state.
      */
+    @Override
     final public int getTargetState()
     {
         return targetState;
     }
 
+    @Override
     public TimeBase getTimeBase()
     {
         if (state < Realized)
@@ -714,13 +729,14 @@ public abstract class BasicController implements Controller, Duration
 
     /**
      * Map the given media-time to time-base-time.
-     * 
+     *
      * @param t
      *            given media time.
      * @return timebase time.
      * @exception ClockStoppedException
      *                thrown if the Controller has already been stopped.
      */
+    @Override
     public Time mapToTimeBase(Time t) throws ClockStoppedException
     {
         return clock.mapToTimeBase(t);
@@ -735,6 +751,7 @@ public abstract class BasicController implements Controller, Duration
      * completed and when all the PrefetchCompleteEvents from down stream nodes
      * have been received, the completePrefetch() call will be invoked.
      */
+    @Override
     public final/* synchronized */void prefetch()
     {
         if (getTargetState() <= Realized)
@@ -781,6 +798,7 @@ public abstract class BasicController implements Controller, Duration
      * completed and when all the RealizeCompleteEvents from down stream nodes
      * have been received, the completeRealize() call will be invoked.
      */
+    @Override
     public final synchronized void realize()
     {
         if (getTargetState() < Realized)
@@ -827,6 +845,7 @@ public abstract class BasicController implements Controller, Duration
      * receiving notification from this controller. This needs to be a
      * synchronized method so as to maintain the integrity of the listenerList.
      */
+    @Override
     final public void removeControllerListener(ControllerListener listener)
     {
         if (listenerList == null)
@@ -877,6 +896,7 @@ public abstract class BasicController implements Controller, Duration
             ((BasicClock) clock).setMediaLength(t);
     }
 
+    @Override
     public void setMediaTime(Time when)
     {
         if (state < Realized)
@@ -888,6 +908,7 @@ public abstract class BasicController implements Controller, Duration
         sendEvent(new MediaTimeSetEvent(this, when));
     }
 
+    @Override
     public float setRate(float factor)
     {
         if (state < Realized)
@@ -906,6 +927,7 @@ public abstract class BasicController implements Controller, Duration
         return newRate;
     }
 
+    @Override
     public void setStopTime(Time t)
     {
         if (state < Realized)
@@ -940,6 +962,7 @@ public abstract class BasicController implements Controller, Duration
         targetState = state;
     }
 
+    @Override
     public void setTimeBase(TimeBase tb) throws IncompatibleTimeBaseException
     {
         if (state < Realized)
@@ -955,6 +978,7 @@ public abstract class BasicController implements Controller, Duration
      * the real work. But it should also invoke this method to maintain the
      * correct states.
      */
+    @Override
     public void stop()
     {
         if (state == Started || state == Prefetching)
@@ -1004,6 +1028,7 @@ public abstract class BasicController implements Controller, Duration
         }
     }
 
+    @Override
     public void syncStart(final Time tbt)
     {
         if (state < Prefetched)
