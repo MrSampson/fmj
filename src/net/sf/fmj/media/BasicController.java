@@ -1318,6 +1318,7 @@ abstract class TimedActionThread extends MediaThread
 
     TimedActionThread(BasicController mc, long nanoseconds)
     {
+        Log.annotate(this, "TimedActionThread created");
         controller = mc;
         useControlPriority();
         wakeupTime = nanoseconds;

@@ -5,6 +5,7 @@ import java.util.*;
 import javax.media.rtp.*;
 import javax.media.rtp.event.*;
 
+import net.sf.fmj.media.Log;
 import net.sf.fmj.media.rtp.util.*;
 
 public class SSRCCacheCleaner implements Runnable
@@ -31,9 +32,14 @@ public class SSRCCacheCleaner implements Runnable
 
     public synchronized void cleannow()
     {
+        Log.annotate(this, "Enter cleannow");
         long time = System.currentTimeMillis();
         if (cache.ourssrc == null)
+        {
+            Log.annotate(this, "Exit right away - ourssrc is null");
             return;
+        }
+
         double reportInterval
             = cache.calcReportInterval(cache.ourssrc.sender, true);
         for (Enumeration elements = cache.cache.elements();
@@ -41,16 +47,28 @@ public class SSRCCacheCleaner implements Runnable
         {
             SSRCInfo info = (SSRCInfo) elements.nextElement();
             if (!info.ours)
+            {
                 if (info.byeReceived)
                 {
                     if (time - info.byeTime < 1000L)
                     {
                         try
                         {
-                            Thread.sleep((1000L - time) + info.byeTime);
+                            long sleepTime = (1000L - time) + info.byeTime;
+                            // TODO - use this.wait() rather than Thread.sleep()
+                            // SGD: Do in 2.8 (too risky to change this in 2.7)
+                            Log.annotate(this, "Sleep for " + sleepTime + "ms");
+                            Thread.sleep(sleepTime);
+                            //this.wait((1000L - time) + info.byeTime);
                         }
                         catch (InterruptedException e)
                         {
+                            // TODO: What to do here? By default: as soon as
+                            // we're interrupted, go ahead and do what we were
+                            // going to do anyway.
+                            // Other options: (1) just exit - don't do the
+                            // things; (2) use a wait loop instead so we always
+                            // wait for the expected time.
                         }
                         time = System.currentTimeMillis();
                     }
@@ -124,12 +142,16 @@ public class SSRCCacheCleaner implements Runnable
                         cache.eventhandler.postEvent(evt);
                     }
                 }
+            }
         }
 
+        Log.annotate(this, "Exit cleannow");
     }
 
+    @Override
     public synchronized void run()
     {
+        Log.annotate(this, "run");
         try
         {
             do
@@ -149,12 +171,14 @@ public class SSRCCacheCleaner implements Runnable
 
     public synchronized void setClean()
     {
+        Log.annotate(this, "setclean");
         timeToClean = true;
         notifyAll();
     }
 
     public synchronized void stop()
     {
+        Log.annotate(this, "stop");
         killed = true;
         notifyAll();
     }

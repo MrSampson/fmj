@@ -37,6 +37,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
             return null;
         }
 
+        @Override
         public Object getOwner()
         {
             return player;
@@ -123,6 +124,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
             return frameRateControl;
         }
 
+        @Override
         public Object getOwner()
         {
             return player;
@@ -160,36 +162,43 @@ public class PlaybackEngine extends BasicController implements ModuleListener
             current = backup;
         }
 
+        @Override
         public long getMediaNanoseconds()
         {
             return current.getMediaNanoseconds();
         }
 
+        @Override
         public Time getMediaTime()
         {
             return current.getMediaTime();
         }
 
+        @Override
         public float getRate()
         {
             return current.getRate();
         }
 
+        @Override
         public Time getStopTime()
         {
             return backup.getStopTime();
         }
 
+        @Override
         public Time getSyncTime()
         {
             return current.getSyncTime();
         }
 
+        @Override
         public TimeBase getTimeBase()
         {
             return current.getTimeBase();
         }
 
+        @Override
         public Time mapToTimeBase(Time t) throws ClockStoppedException
         {
             return current.mapToTimeBase(t);
@@ -237,6 +246,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
             }
         }
 
+        @Override
         public void setMediaTime(Time now)
         {
             synchronized (backup)
@@ -251,11 +261,13 @@ public class PlaybackEngine extends BasicController implements ModuleListener
             }
         }
 
+        @Override
         public float setRate(float factor)
         {
             return backup.setRate(factor);
         }
 
+        @Override
         public void setStopTime(Time t)
         {
             synchronized (backup)
@@ -264,6 +276,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
             }
         }
 
+        @Override
         public void setTimeBase(TimeBase tb)
                 throws IncompatibleTimeBaseException
         {
@@ -273,6 +286,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
             }
         }
 
+        @Override
         public void stop()
         {
             synchronized (backup)
@@ -281,6 +295,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
             }
         }
 
+        @Override
         public void syncStart(Time tbt)
         {
             synchronized (backup)
@@ -394,7 +409,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
     static void profile(String msg, long time)
     {
         Log.profile("Profile: " + msg + ": "
-                + (System.currentTimeMillis() - time) + " ms\n");
+                + (System.currentTimeMillis() - time) + " ms");
     }
 
     public PlaybackEngine(BasicPlayer p)
@@ -475,6 +490,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
         return false;
     }
 
+    @Override
     public void bufferPrefetched(Module src)
     {
         if (!prefetchEnabled)
@@ -485,7 +501,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
             {
                 if (waitPrefetched.contains(src))
                     waitPrefetched.removeElement(src);
-                
+
                 if (waitPrefetched.isEmpty())
                 {
                     // All sinks are prefetched. Wake up the
@@ -739,6 +755,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
         return container;
     }
 
+    @Override
     public void dataBlocked(Module src, boolean blocked)
     {
         dataPathBlocked = blocked;
@@ -957,7 +974,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
 
     /**
      * The stub function to perform the steps to prefetch the controller.
-     * 
+     *
      * @return true if successful.
      */
     @Override
@@ -1442,6 +1459,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
         return null;
     }
 
+    @Override
     public void formatChanged(Module src, Format oldFormat, Format newFormat)
     {
         Log.comment(src + ": input format changed: " + newFormat);
@@ -1460,6 +1478,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
         }
     }
 
+    @Override
     public void formatChangedFailure(Module src, Format oldFormat,
             Format newFormat)
     {
@@ -1475,6 +1494,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
         }
     }
 
+    @Override
     public void framesBehind(Module src, float frames, InputConnector ic)
     {
         OutputConnector oc;
@@ -1536,7 +1556,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
      * Return a list of <b>Control</b> objects this <b>Controller</b> supports.
      * In this case, it is all the controls from all the modules controlled by
      * this engine.
-     * 
+     *
      * @return list of <b>Controller</b> controls.
      */
     @Override
@@ -1639,7 +1659,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
     /**
      * Return the duration of the media. It's unknown until we implement a
      * particular node.
-     * 
+     *
      * @return the duration of the media.
      */
     @Override
@@ -1697,7 +1717,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
     /**
      * Returns the start latency. Don't know until the particular node is
      * implemented.
-     * 
+     *
      * @return the start latency.
      */
     @Override
@@ -1749,6 +1769,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
         }
     }
 
+    @Override
     public void internalErrorOccurred(Module src)
     {
         if (!internalErrorOccurred)
@@ -1815,6 +1836,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
 
     }
 
+    @Override
     public void markedDataArrived(Module src, Buffer buffer)
     {
         if (src instanceof BasicSourceModule)
@@ -1836,6 +1858,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
         }
     }
 
+    @Override
     public void mediaEnded(Module src)
     {
         if (src instanceof BasicSinkModule)
@@ -1864,6 +1887,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
         }
     }
 
+    @Override
     public void pluginTerminated(Module src)
     {
         if (!internalErrorOccurred)
@@ -1980,6 +2004,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
         }
     }
 
+    @Override
     public void resetted(Module src)
     {
         synchronized (waitResetted)
@@ -2157,6 +2182,7 @@ public class PlaybackEngine extends BasicController implements ModuleListener
                 getTargetState(), getMediaTime()));
     }
 
+    @Override
     public void stopAtTime(Module src)
     {
         if (src instanceof BasicSinkModule)

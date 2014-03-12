@@ -83,11 +83,11 @@ public class Log
     {
         logReadBytes(obj, 0, false);
     }
-    
+
     /**
      * Log that this object has read a packet (or other chunk of data).  Logs
      * are made increasingly rarely as the call progresses.
-     * @param obj The object making the call (so call as 
+     * @param obj The object making the call (so call as
      * <tt>logRead(this, nBytes)</tt>)
      * @param nBytes The number of bytes that were read
      */
@@ -95,7 +95,7 @@ public class Log
     {
         logReadBytes(obj, nBytes, true);
     }
-    
+
     // This method contains a small per-call memory leak - we never remove
     // the per-object data from the hashMap.  Since the amount of leaked data is
     // very small (~10b per object) that's OK, but if we ever beef this up we
@@ -113,11 +113,11 @@ public class Log
                 thisData[1] = 0; // Total number of bytes read
                 thisData[2] = 1; // First packet to log
             }
-            
+
             int nCalled = thisData[0] + 1;
             int totalBytes = thisData[1] + nBytes;
             int nextCallToLog = thisData[2];
-            
+
             if (nCalled >= nextCallToLog)
             {
                 logger.finest("logReadBytes called " + nCalled + " times " +
@@ -132,7 +132,31 @@ public class Log
             packetTracker.put(obj.hashCode(), thisData);
         }
     }
-    
+
+    /**
+     * Common log to indicated when a media object is started (or opened, or
+     * whatever else makes sense for that object).  Using a common log makes it
+     * easier to automatically parse lifetimes for media stack objects when
+     * looking through the logs.
+     * @param obj - The object being started
+     */
+    public static void logMediaStackObjectStarted(Object obj)
+    {
+        logger.fine("Start media stack object: " + obj);
+    }
+
+    /**
+     * Common log to indicated when a media object is stopped (or closed, or
+     * whatever else makes sense for that object).  Using a common log makes it
+     * easier to automatically parse lifetimes for media stack objects when
+     * looking through the logs.
+     * @param obj - The object being started
+     */
+    public static void logMediaStackObjectStopped(Object obj)
+    {
+        logger.fine("Stop media stack object: " + obj);
+    }
+
     public static synchronized void error(Object str)
     {
         if (isEnabled && logger.isLoggable(Level.SEVERE))

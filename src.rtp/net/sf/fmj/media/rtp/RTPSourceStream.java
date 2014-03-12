@@ -297,6 +297,7 @@ public class RTPSourceStream
         return thisControls;
     }
 
+    @Override
     public Format getFormat()
     {
         return format;
@@ -326,6 +327,7 @@ public class RTPSourceStream
      * @param buffer The <tt>Buffer</tt> object to copy an element of the queue
      * to.
      */
+    @Override
     public void read(Buffer buffer)
     {
         /*
@@ -387,6 +389,7 @@ public class RTPSourceStream
         }
     }
 
+    @Override
     public void run()
     {
         do
@@ -503,6 +506,7 @@ public class RTPSourceStream
         }
     }
 
+    @Override
     public void setTransferHandler(BufferTransferHandler transferHandler)
     {
         Log.createLink(this, transferHandler, "RTPSourceStream uses BufferTransferHandler");
@@ -511,7 +515,7 @@ public class RTPSourceStream
 
     public void start()
     {
-        Log.annotate(this, "start");
+        Log.logMediaStackObjectStarted(this);
         synchronized (startSyncRoot)
         {
             started = true;
@@ -525,8 +529,7 @@ public class RTPSourceStream
 
     public void stop()
     {
-        Log.annotate(this, "stop");
-
+        Log.logMediaStackObjectStopped(this);
         synchronized (startSyncRoot)
         {
             started = false;

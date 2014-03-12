@@ -146,17 +146,18 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * completion events.
      * </ul>
      * <p>
-     * 
+     *
      * <b>Note:</b> It is undefined what will happen if a Controller is under
      * the control of a Player and any of the Controller's methods are called
      * outside of the controlling Player.
-     * 
+     *
      * @param newController
      *            the Controller this Player will control.
      * @exception IncompatibleTimeBaseException
      *                thrown if the new controller will not accept the player's
      *                timebase.
      */
+    @Override
     public synchronized void addController(Controller newController)
             throws IncompatibleTimeBaseException
     {
@@ -216,7 +217,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
 
     /**
      * Return true if the player is currently playing media with an audio track.
-     * 
+     *
      * @return true if the player is playing audio.
      */
     protected abstract boolean audioEnabled();
@@ -317,6 +318,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
     /**
      * This get called when some Controller notifies this player of any event.
      */
+    @Override
     final public void controllerUpdate(ControllerEvent evt)
     {
         processEvent(evt);
@@ -327,7 +329,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * overridden by subclass. The subclass method should change the master
      * timebase if necessary. It should handle audio only or video only tracks
      * properly when the device is busy.
-     * 
+     *
      * @return true if the given controller is usable; false if the controller
      *         cannot be used.
      */
@@ -390,7 +392,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * Subclasses are allowed to override doConfigure(). But this should be done
      * in caution. Subclass should also invoke super.doConfigure(). This is
      * called from a separately running thread.
-     * 
+     *
      * @return true if successful.
      */
     @Override
@@ -504,7 +506,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * will call prefetch() on every controller in the controller list and wait
      * for their completion events. This is called from a separately running
      * thread.
-     * 
+     *
      * @return true if successful.
      */
     @Override
@@ -614,7 +616,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * Subclasses are allowed to override doRealize(). But this should be done
      * in caution. Subclass should also invoke super.doRealize(). This is called
      * from a separately running thread.
-     * 
+     *
      * @return true if successful.
      */
     @Override
@@ -685,7 +687,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
     /**
      * Called from setMediaTime. This is used for subclasses to add in their own
      * behavior.
-     * 
+     *
      * @param now
      *            the target media time.
      */
@@ -731,6 +733,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
     {
     }
 
+    @Override
     public void downloadUpdate()
     {
         if (extendedCachingControl == null)
@@ -772,7 +775,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
 
     /**
      * Return the list of BasicControllers supported by this Player.
-     * 
+     *
      * @return a vector of the BasicControllers supported by this Player.
      */
     public final Vector getControllerList()
@@ -786,9 +789,10 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * Subclasses should override this method and return the control panel
      * component but call this method first to ensure that the restrictions on
      * player methods are enforced.
-     * 
+     *
      * @return the default control panel GUI.
      */
+    @Override
     public Component getControlPanelComponent()
     {
         int state = getState();
@@ -806,7 +810,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
     /**
      * Return the list of controls from its slave controllers plus the ones that
      * this player supports.
-     * 
+     *
      * @return the list of controls supported by this player.
      */
     @Override
@@ -863,7 +867,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
 
     /**
      * Get the duration of the movie.
-     * 
+     *
      * @return the duration of the movie.
      */
     @Override
@@ -881,9 +885,10 @@ public abstract class BasicPlayer extends BasicController implements Player,
     /**
      * Get the object for controlling audio gain. Return null if this player
      * does not have a GainControl (e.g. no audio).
-     * 
+     *
      * @return the GainControl object for this player.
      */
+    @Override
     public GainControl getGainControl()
     {
         int state = getState();
@@ -902,7 +907,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * This should be implemented by the subclass. The subclass method should
      * return the master TimeBase -- the TimeBase that all other controllers
      * slave to. Use SystemTimeBase if unsure.
-     * 
+     *
      * @return the master time base.
      */
     protected abstract TimeBase getMasterTimeBase();
@@ -930,7 +935,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
 
     /**
      * Get the DataSource used by this player.
-     * 
+     *
      * @return the DataSource used by this player.
      */
     protected javax.media.protocol.DataSource getSource()
@@ -971,9 +976,10 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * will return null. Subclasses should override this method and return the
      * visual component but call this method first to ensure that the
      * restrictions on player methods are enforced.
-     * 
+     *
      * @return the media display component.
      */
+    @Override
     public Component getVisualComponent()
     {
         int state = getState();
@@ -1317,10 +1323,11 @@ public abstract class BasicPlayer extends BasicController implements Player,
 
     /**
      * Stop controlling a Controller.
-     * 
+     *
      * @param oldController
      *            the Controller to stop controlling.
      */
+    @Override
     public final synchronized void removeController(Controller oldController)
     {
         int state = getState();
@@ -1366,7 +1373,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
 
     /**
      * Set the upper bound of the media time.
-     * 
+     *
      * @param t the duration in nanoseconds.
      */
     @Override
@@ -1380,7 +1387,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * Loops through the list of controllers maintained by this player and
      * invoke setMediaTime on each of them. This is a "final" method and cannot
      * be overridden by subclasses.
-     * 
+     *
      * @param now
      *            the target media time.
      */
@@ -1486,7 +1493,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * Set the DataSource that provides the media for this player. BasicPlayer
      * only supports PullDataSource by default. Subclasses can override this
      * method to support other DataSources.
-     * 
+     *
      * @param source
      *            of media for this player.
      * @exception IOException
@@ -1495,6 +1502,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * @exception IncompatibleSourceException
      *                thrown if the Player can't use this source.
      */
+    @Override
     public void setSource(javax.media.protocol.DataSource source)
             throws IOException, IncompatibleSourceException
     {
@@ -1546,7 +1554,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * getMasterTimeBase(). This is to ensure that we won't set to a timebase
      * the audio cannot handle at this point. If the playback is video only, the
      * timebase can be set to any timebase desired.
-     * 
+     *
      * @param tb
      *            time base to be used by the Player.
      * @exception IncompatibleTimeBaseException
@@ -1600,7 +1608,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * Slave all the controllers to the master time base. The controllers should
      * be in realized or greater state This differs from the setTimeBase() as it
      * loops through each controllers and call setTimeBase on each of them.
-     * 
+     *
      * @param tb
      *            the time base to be used by all controllers.
      * @exception IncompatibleTimeBaseException
@@ -1627,6 +1635,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * This is a "final" method. Subclasses should override doStart() to
      * implement its own specific behavior.
      */
+    @Override
     public final void start()
     {
         synchronized (startSync)
@@ -1780,7 +1789,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * <p>
      * This is a "final" method. Subclasses should override doStart() to
      * implement its own specific behavior.
-     * 
+     *
      * @param tbt
      *            the time base time to start the player.
      */
@@ -1800,7 +1809,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
             if (state == Started)
             {
                 throwError(new ClockStartedError(
-                        "syncStart() cannot be used on an already started player"));
+                    "syncStart() cannot be used on an already started player"));
             }
 
             if (state != Prefetched)
@@ -1928,7 +1937,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
 
     /**
      * Return true if the player is currently playing media with a video track.
-     * 
+     *
      * @return true if the player is playing video.
      */
     protected abstract boolean videoEnabled();
@@ -1945,6 +1954,7 @@ class PlayThread extends MediaThread
 
     public PlayThread(BasicPlayer player)
     {
+        Log.annotate(this, "PlayThread created");
         this.player = player;
         setName(getName() + " (PlayThread)");
         useControlPriority();

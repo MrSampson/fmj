@@ -13,6 +13,7 @@ import javax.media.rtp.*;
 import javax.media.rtp.event.*;
 import javax.media.rtp.rtcp.*;
 
+import net.sf.fmj.media.Log;
 import net.sf.fmj.media.protocol.rtp.DataSource;
 import net.sf.fmj.media.rtp.util.*;
 
@@ -364,6 +365,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         }
     }
 
+    @Override
     public void addPeer(SessionAddress sessionaddress) throws IOException,
             InvalidSessionAddressException
     {
@@ -686,6 +688,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         }
     }
 
+    @Override
     public void closeSession(String s)
     {
         stopParticipating(s, cache.ourssrc);
@@ -785,6 +788,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         return datasource;
     }
 
+    @Override
     public SendStream createSendStream(int i,
             javax.media.protocol.DataSource datasource, int j)
             throws UnsupportedFormatException, IOException, SSRCInUseException
@@ -950,6 +954,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
     @Override
     public void dispose()
     {
+        logger.info("Enter RTPSessionManager.dispose()");
         if (rtpConnector != null)
         {
             rtpConnector.close();
@@ -992,7 +997,11 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
                 rtcprawreceiver.close();
         }
         if (cleaner != null)
-            cleaner.stop();
+        {
+            logger.info("Call cleaner.stop()...");
+            cleaner.stop(); // This has been seen to take 900ms
+            logger.info("... cleaner.stop() complete.");
+        }
         if (cache != null)
             cache.destroy();
         if (rtpForwarder != null)
@@ -1012,6 +1021,8 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
             dataSocket.close();
         if (controlSocket != null)
             controlSocket.close();
+
+        logger.info("Exit RTPSessionManager.dispose()");
     }
 
     private int findLocalPorts()
@@ -1044,11 +1055,13 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         return i;
     }
 
+    @Override
     public String generateCNAME()
     {
         return SourceDescription.generateCNAME();
     }
 
+    @Override
     public long generateSSRC()
     {
         long l = TrueRandom.rand();
@@ -1100,6 +1113,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         return vector;
     }
 
+    @Override
     public Object getControl(String s)
     {
         if (s.equals("javax.media.control.BufferControl"))
@@ -1111,6 +1125,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         }
     }
 
+    @Override
     public Object[] getControls()
     {
         Object aobj[] = new Object[1];
@@ -1134,6 +1149,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         }
     }
 
+    @Override
     public long getDefaultSSRC()
     {
         return defaultSSRC;
@@ -1180,6 +1196,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         return localReceiverAddress;
     }
 
+    @Override
     public SessionAddress getLocalSessionAddress()
     {
         if (newRtpInterface)
@@ -1208,6 +1225,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         return -1;
     }
 
+    @Override
     public int getMulticastScope()
     {
         return ttl;
@@ -1238,6 +1256,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         return vector1;
     }
 
+    @Override
     public Vector getPeers()
     {
         return peerlist;
@@ -1310,6 +1329,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         return new Vector(sendstreamlist);
     }
 
+    @Override
     public SessionAddress getSessionAddress()
     {
         SessionAddress sessionaddress = new SessionAddress(dataaddress,
@@ -1333,6 +1353,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         return ssrcinfo;
     }
 
+    @Override
     public RTPStream getStream(long l)
     {
         Vector vector = null;
@@ -1644,6 +1665,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         initialized = true;
     }
 
+    @Override
     public int initSession(SessionAddress sessionaddress, long l,
             SourceDescription asourcedescription[], double d, double d1)
             throws InvalidSessionAddressException
@@ -1749,6 +1771,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         return 0;
     }
 
+    @Override
     public int initSession(SessionAddress sessionaddress,
             SourceDescription asourcedescription[], double d, double d1)
             throws InvalidSessionAddressException
@@ -1882,6 +1905,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         return unicast;
     }
 
+    @Override
     public void removeAllPeers()
     {
         for (int i = 0; i < peerlist.size(); i++)
@@ -1903,6 +1927,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         dslist.removeObj(datasource);
     }
 
+    @Override
     public void removePeer(SessionAddress sessionaddress)
     {
         PacketForwarder packetforwarder = (PacketForwarder) peerrtplist
@@ -2106,6 +2131,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         defaultsource.setMgr(this);
     }
 
+    @Override
     public void setMulticastScope(int i)
     {
         if (i < 1)
@@ -2384,6 +2410,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         }
     }
 
+    @Override
     public int startSession(int i, EncryptionInfo encryptioninfo)
             throws IOException
     {
@@ -2453,6 +2480,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         return 0;
     }
 
+    @Override
     public int startSession(SessionAddress sessionaddress, int i,
             EncryptionInfo encryptioninfo) throws IOException,
             InvalidSessionAddressException
@@ -2593,6 +2621,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         return 0;
     }
 
+    @Override
     public int startSession(SessionAddress sessionaddress,
             SessionAddress sessionaddress1, SessionAddress sessionaddress2,
             EncryptionInfo encryptioninfo) throws IOException,

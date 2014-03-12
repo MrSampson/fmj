@@ -129,11 +129,12 @@ public class RTPReceiver extends PacketFilter
         }
         catch (FailedToProcessPacketException e)
         {
-            Log.warning(e.getMessage());
+            Log.warning("FailedToProcessPacket: " + e);
             rtpPacket = null;
         }
         catch (PartiallyProcessedPacketException e)
         {
+            Log.warning("PartiallyProcessedPacket: " + e);
             String message = e.getMessage();
             if (message != null)
             {
