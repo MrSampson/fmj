@@ -54,15 +54,18 @@ public class RTCPReceiver implements PacketConsumer
         packetforwarder.startPF();
     }
 
+    @Override
     public void closeConsumer()
     {
     }
 
+    @Override
     public String consumerString()
     {
         return "RTCP Packet Receiver/Collector";
     }
 
+    @Override
     public void sendTo(Packet packet)
     {
         sendTo((RTCPPacket) packet);
@@ -105,6 +108,7 @@ public class RTCPReceiver implements PacketConsumer
             break;
 
         case -1:
+            // Compound packet.  Re-spin with each individual packet.
             RTCPCompoundPacket rtcpcompoundpacket = (RTCPCompoundPacket) rtcppacket;
             cache.updateavgrtcpsize(((Packet) (rtcpcompoundpacket)).length);
             for (int j = 0; j < rtcpcompoundpacket.packets.length; j++)

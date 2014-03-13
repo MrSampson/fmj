@@ -52,25 +52,31 @@ public class SSRCCacheCleaner implements Runnable
                 {
                     if (time - info.byeTime < 1000L)
                     {
-                        try
+                        // We've received a BYE.  Wait 1s before posting the
+                        // related event.
+                        // SGD - why? Presumably to ensure we've got all the
+                        // info related to the stream before finishing?
+                        long wakeTime = info.byeTime + 1000L;
+                        long now = System.currentTimeMillis();
+                        while (now < wakeTime)
                         {
-                            long sleepTime = (1000L - time) + info.byeTime;
-                            // TODO - use this.wait() rather than Thread.sleep()
-                            // SGD: Do in 2.8 (too risky to change this in 2.7)
-                            Log.annotate(this, "Sleep for " + sleepTime + "ms");
-                            Thread.sleep(sleepTime);
-                            //this.wait((1000L - time) + info.byeTime);
+                            try
+                            {
+                                // Don't block this class while waiting (use
+                                // this.wait() rather than Thread.sleep()).
+                                long sleep = wakeTime - now;
+                                Log.annotate(this, "Wait for " + sleep + "ms");
+                                this.wait(sleep);
+                            }
+                            catch (InterruptedException e)
+                            {
+                                // Wait to do our cleanup.
+                                Log.annotate(this, "Wait interrupted");
+                            }
+
+                            now = System.currentTimeMillis();
                         }
-                        catch (InterruptedException e)
-                        {
-                            // TODO: What to do here? By default: as soon as
-                            // we're interrupted, go ahead and do what we were
-                            // going to do anyway.
-                            // Other options: (1) just exit - don't do the
-                            // things; (2) use a wait loop instead so we always
-                            // wait for the expected time.
-                        }
-                        time = System.currentTimeMillis();
+                        time = now;
                     }
                     info.byeTime = 0L;
                     info.byeReceived = false;
