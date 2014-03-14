@@ -69,6 +69,7 @@ public class SSRCCacheCleaner implements Runnable
                             // Other options: (1) just exit - don't do the
                             // things; (2) use a wait loop instead so we always
                             // wait for the expected time.
+                            Log.info("Sleep interrupted");
                         }
                         time = System.currentTimeMillis();
                     }
