@@ -998,9 +998,9 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         }
         if (cleaner != null)
         {
-            logger.info("Call cleaner.stop()...");
+            logger.fine("Call cleaner.stop()...");
             cleaner.stop(); // This has been seen to take 900ms
-            logger.info("... cleaner.stop() complete.");
+            logger.fine("... cleaner.stop() complete.");
         }
         if (cache != null)
             cache.destroy();
