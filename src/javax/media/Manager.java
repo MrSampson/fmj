@@ -17,9 +17,9 @@ import net.sf.fmj.utility.*;
  * Standard JMF class -- see <a href=
  * "http://java.sun.com/products/java-media/jmf/2.1.1/apidocs/javax/media/Manager.html"
  * target="_blank">this class in the JMF Javadoc</a>.
- * 
+ *
  * @author Ken Larson
- * 
+ *
  */
 public final class Manager
 {
@@ -37,6 +37,7 @@ public final class Manager
             this.controller = controller;
         }
 
+        @Override
         public synchronized void controllerUpdate(ControllerEvent event)
         {
             if (event instanceof RealizeCompleteEvent)
@@ -760,7 +761,8 @@ public final class Manager
                 }
             } catch (ClassNotFoundException e)
             {
-                logger.finer("createProcessor: " + e); // no need for call stack
+                logger.finer("createProcessor: Class not found: " +
+                                      e.getMessage()); // no need for call stack
                 continue;
             } catch (IncompatibleSourceException e)
             {

@@ -53,6 +53,10 @@ public class Log
         indent--;
     }
 
+    /**
+     * Dump the stack on hitting an exception.
+     * @param e The exception hit.
+     */
     public static synchronized void dumpStack(Throwable e)
     {
         if (isEnabled && logger.isLoggable(Level.INFO))
@@ -68,18 +72,40 @@ public class Log
         }
     }
 
+    /**
+     * Dump the stack from a random point in the code, to provide more info
+     * about how we've got to a particular point in the code.
+     *
+     * @param message Message to include in the log.
+     */
+    public static synchronized void dumpStack(String message)
+    {
+        if (isEnabled && logger.isLoggable(Level.FINEST))
+        {
+            Exception e = new Exception(message);
+            StringBuffer buf = new StringBuffer(e.getMessage() + "\n");
+            for(StackTraceElement s : e.getStackTrace())
+            {
+                buf.append(s.toString());
+                buf.append("\n");
+            }
+
+            logger.finest(buf.toString());
+        }
+    }
+
     // Data on how many packets have been seen by various objects in the media
     // stream.
     static ConcurrentHashMap<Integer, int[]> packetTracker =
                                         new ConcurrentHashMap<Integer, int[]>();
     static int LOG_READ_MAX_INTERVAL = 1024;
-    
+
     /**
      * Log that this object has read a packet (or other chunk of data).  Logs
      * are made increasingly rarely as the call progresses.
      * @param obj The object making the call (so call as <tt>logRead(this)</tt>)
      */
-    public static synchronized void logRead(Object obj)
+    public static void logRead(Object obj)
     {
         logReadBytes(obj, 0, false);
     }
@@ -91,7 +117,7 @@ public class Log
      * <tt>logRead(this, nBytes)</tt>)
      * @param nBytes The number of bytes that were read
      */
-    public static synchronized void logReadBytes(Object obj, int nBytes)
+    public static void logReadBytes(Object obj, int nBytes)
     {
         logReadBytes(obj, nBytes, true);
     }
@@ -100,36 +126,38 @@ public class Log
     // the per-object data from the hashMap.  Since the amount of leaked data is
     // very small (~10b per object) that's OK, but if we ever beef this up we
     // should add some removal code as well.
-    private static synchronized void logReadBytes(Object obj, int nBytes,
-                                                               boolean logBytes)
+    private static void logReadBytes(Object obj, int nBytes, boolean logBytes)
     {
         if (isEnabled && logger.isLoggable(Level.FINEST))
         {
-            int[] thisData = packetTracker.get(obj.hashCode());
-            if (thisData == null)
+            synchronized (packetTracker)
             {
-                thisData = new int[3];
-                thisData[0] = 0; // Number of times we've been called for this object
-                thisData[1] = 0; // Total number of bytes read
-                thisData[2] = 1; // First packet to log
-            }
+                int[] thisData = packetTracker.get(obj.hashCode());
+                if (thisData == null)
+                {
+                    thisData = new int[3];
+                    thisData[0] = 0; // Number of times we've been called for this object
+                    thisData[1] = 0; // Total number of bytes read
+                    thisData[2] = 1; // First packet to log
+                }
 
-            int nCalled = thisData[0] + 1;
-            int totalBytes = thisData[1] + nBytes;
-            int nextCallToLog = thisData[2];
+                int nCalled = thisData[0] + 1;
+                int totalBytes = thisData[1] + nBytes;
+                int nextCallToLog = thisData[2];
 
-            if (nCalled >= nextCallToLog)
-            {
-                logger.finest("logReadBytes called " + nCalled + " times " +
-                    (logBytes ? "(" + totalBytes + " bytes total) " : "") +
+                if (nCalled >= nextCallToLog)
+                {
+                    logger.finest("logReadBytes called " + nCalled + " times " +
+                        (logBytes ? "(" + totalBytes + " bytes total) " : "") +
                                                                  "from " + obj);
-                thisData[2] = (nextCallToLog < LOG_READ_MAX_INTERVAL) ?
-                  (2 * nextCallToLog) : (LOG_READ_MAX_INTERVAL + nextCallToLog);
-            }
+                    thisData[2] = (nextCallToLog < LOG_READ_MAX_INTERVAL) ?
+                      (2 * nextCallToLog) : (LOG_READ_MAX_INTERVAL + nextCallToLog);
+                }
 
-            thisData[0] = nCalled;
-            thisData[1] = totalBytes;
-            packetTracker.put(obj.hashCode(), thisData);
+                thisData[0] = nCalled;
+                thisData[1] = totalBytes;
+                packetTracker.put(obj.hashCode(), thisData);
+            }
         }
     }
 
