@@ -56,7 +56,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
          * collection of streams is entirely content dependent. The
          * <tt>ContentDescriptor</tt> of this <tt>DataSource</tt> provides the
          * only indication of what streams can be available on this connection.
-         * 
+         *
          * @return The collection of streams for this source.
          */
         @Override
@@ -148,6 +148,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
             }
         }
 
+        @Override
         public Format getFormat()
         {
             return format;
@@ -249,14 +250,16 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
         // //////////////////////////////////////////////////////////////
         // Local methods
         // //////////////////////////////////////////////////////////////
+        @Override
         public void read(javax.media.Buffer buffer) throws IOException
         {
             if (closed)
             {
-                 Log.info("Trying to read from RawBufferMux " +
+                Log.info("Trying to read from RawBufferMux " +
                           this.hashCode() +
                           " with closed source stream");
-                throw new IOException("The source stream is closed");
+                return; // The mux has been closed; this isn't exceptional.
+                //throw new IOException("The source stream is closed");
             }
 
             Buffer current = null;
@@ -293,14 +296,14 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
 	                    }
 	                }
 	            }
-	
+
 	            // Copy all the attributes from current to buffer.
 	            Object data = buffer.getData();
 	            Object hdr = buffer.getHeader();
 	            buffer.copy(current);
 	            current.setData(data);
 	            current.setHeader(hdr);
-	
+
 	            // return this buffer as being a free buffer
 	            synchronized (bufferQ)
 	            {
@@ -336,6 +339,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
             }
         }
 
+        @Override
         public void run()
         {
             for (;;)
@@ -395,6 +399,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
 
         }// end of run
 
+        @Override
         public void setTransferHandler(BufferTransferHandler handler)
         {
             Log.createLink(this, handler, "RawBufferMux uses BufferTransferHandler");
@@ -559,6 +564,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
      * accepted by the plug-in after a call to this method. The plug-in can be
      * reinstated after being closed by calling <tt>open</tt>.
      */
+    @Override
     public void close()
     {
         // stop() and disconnect() datasource and set it to null
@@ -586,19 +592,22 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
      * returned can be a push or pull datasource. i.e. a
      * <tt>Push[Pull]DataSource</tt> or <tt>Push[Pull]BufferDataSource</tt>. <BR>
      * The datasource must be returned in the connected state.
-     * 
+     *
      * @return the output <tt>DataSource</tt>
      */
+    @Override
     public DataSource getDataOutput()
     {
         return source;
     }
 
+    @Override
     public long getMediaNanoseconds()
     {
         return clock.getMediaNanoseconds();
     }
 
+    @Override
     public Time getMediaTime()
     {
         return clock.getMediaTime();
@@ -609,21 +618,25 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
      * Returns a descriptive name for the plug-in. This is a user readable
      * string.
      */
+    @Override
     public String getName()
     {
         return "Raw Buffer Multiplexer";
     }
 
+    @Override
     public float getRate()
     {
         return clock.getRate();
     }
 
+    @Override
     public Time getStopTime()
     {
         return clock.getStopTime();
     }
 
+    @Override
     public Format[] getSupportedInputFormats()
     {
         return new Format[] { new AudioFormat(null), new VideoFormat(null) };
@@ -636,6 +649,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
      * by <tt>inputs</tt>. If <tt>inputs</tt> is null, then it lists all
      * possible output content descriptors that this plug-in advertises.
      */
+    @Override
     public ContentDescriptor[] getSupportedOutputContentDescriptors(Format[] fmt)
     {
         // we support a raw format, so we dont really need to check the input
@@ -644,12 +658,14 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
         return supported;
     }
 
+    @Override
     public Time getSyncTime()
     {
         return clock.getSyncTime();
 
     }
 
+    @Override
     public TimeBase getTimeBase()
     {
         return clock.getTimeBase();
@@ -661,7 +677,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
      * subsequently as keys to identify each individual track in the
      * <tt>process</tt> method. This methods should be called only once. A
      * java.lang.Error is thrown if it's called more than once.
-     * 
+     *
      * @param trackFormats
      *            an array for formats specifying the formats for each track in
      *            the multiplexer.
@@ -678,6 +694,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
         return true;
     }
 
+    @Override
     public Time mapToTimeBase(Time t) throws ClockStoppedException
     {
         return clock.mapToTimeBase(t);
@@ -689,6 +706,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
      * ResourceUnavailableException. Data should not be passed into the plug-in
      * without first calling this method.
      */
+    @Override
     public void open() throws ResourceUnavailableException
     {
         // the datasource must be created in
@@ -738,7 +756,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
     /**
      * Process the buffer and multiplex it with data from other tracks. The
      * multiplexed output is sent to the output <tt>DataSource</tt>.
-     * 
+     *
      * @param buffer
      *            the input buffer
      * @param trackID
@@ -748,6 +766,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
      *         possible return codes are defined in PlugIn.
      * @see PlugIn
      */
+    @Override
     public int process(Buffer buffer, int trackID)
     {
         // If the processor starts out having RTP times, before the
@@ -780,6 +799,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
      * Resets the state of the plug-in. Typically at end of media or when media
      * is repositioned.
      */
+    @Override
     public void reset()
     {
         for (int i = 0; i < streams.length; i++)
@@ -792,7 +812,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
 
     /**
      * Set the output content-type.
-     * 
+     *
      * @param outputContentDescriptor
      *            the content-type of the output.
      * @exception UnsupportedFormatException
@@ -802,6 +822,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
      *                if the Multiplexer does not support format changes after
      *                it has been set.
      */
+    @Override
     public ContentDescriptor setContentDescriptor(
             ContentDescriptor outputContentDescriptor)
     {
@@ -820,6 +841,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
         return contentDesc;
     }
 
+    @Override
     public Format setInputFormat(Format input, int trackID)
     {
         if (trackID < numTracks)
@@ -832,6 +854,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
         return input;
     }
 
+    @Override
     public void setMediaTime(Time now)
     {
         synchronized (timeSetSync)
@@ -845,6 +868,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
         }
     }
 
+    @Override
     public int setNumTracks(int nTracks)
     {
         numTracks = nTracks;
@@ -854,6 +878,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
         return nTracks;
     }
 
+    @Override
     public float setRate(float factor)
     {
         if (factor == clock.getRate())
@@ -862,11 +887,13 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
 
     }
 
+    @Override
     public void setStopTime(Time stopTime)
     {
         clock.setStopTime(stopTime);
     }
 
+    @Override
     public void setTimeBase(TimeBase master)
             throws IncompatibleTimeBaseException
     {
@@ -874,6 +901,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
             throw new IncompatibleTimeBaseException();
     }
 
+    @Override
     public void stop()
     {
         synchronized (timeSetSync)
@@ -886,6 +914,7 @@ public class RawBufferMux extends BasicPlugIn implements Multiplexer, Clock
         }
     }
 
+    @Override
     public void syncStart(Time at)
     {
         synchronized (timeSetSync)
