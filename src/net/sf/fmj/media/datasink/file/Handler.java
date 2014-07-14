@@ -1,12 +1,25 @@
 package net.sf.fmj.media.datasink.file;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileDescriptor;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 
-import javax.media.*;
-import javax.media.protocol.*;
+import javax.media.Control;
+import javax.media.IncompatibleSourceException;
+import javax.media.MediaLocator;
+import javax.media.protocol.DataSource;
+import javax.media.protocol.PullDataSource;
+import javax.media.protocol.PushDataSource;
+import javax.media.protocol.PushSourceStream;
+import javax.media.protocol.Seekable;
+import javax.media.protocol.SourceStream;
+import javax.media.protocol.SourceTransferHandler;
 
-import net.sf.fmj.media.*;
-import net.sf.fmj.media.datasink.*;
+import net.sf.fmj.media.Log;
+import net.sf.fmj.media.Syncable;
+import net.sf.fmj.media.datasink.BasicDataSink;
+import net.sf.fmj.media.datasink.RandomAccess;
 
 public class Handler extends BasicDataSink implements SourceTransferHandler,
         Seekable, Runnable, RandomAccess, Syncable
@@ -28,6 +41,7 @@ public class Handler extends BasicDataSink implements SourceTransferHandler,
 
     protected boolean errorEncountered = false;
     protected String errorReason = null;
+    private   Throwable closeCallerStack = null;
 
     protected Control[] controls;
 
@@ -72,6 +86,13 @@ public class Handler extends BasicDataSink implements SourceTransferHandler,
 
     protected final void close(String reason)
     {
+        Log.comment("Closing: " + reason);
+
+        // Store off the caller's stack.  We think someone may be calling
+        // close prematurely, so we hope this may help (eventually) tracking
+        // down who that is.
+        closeCallerStack = new Throwable();
+
         synchronized (this)
         {
             if (state == CLOSED)
@@ -160,6 +181,7 @@ public class Handler extends BasicDataSink implements SourceTransferHandler,
 
     private boolean deleteFile(File file)
     {
+        Log.comment("Deleting file");
         boolean fileDeleted = false;
         try
         {
@@ -172,6 +194,7 @@ public class Handler extends BasicDataSink implements SourceTransferHandler,
 
     public long doSeek(long where)
     {
+        Log.comment("Seeking to " + where);
         if (raFile != null)
         {
             try
@@ -233,6 +256,9 @@ public class Handler extends BasicDataSink implements SourceTransferHandler,
 
     public void open() throws IOException, SecurityException
     {
+        Log.comment("Opening");
+        closeCallerStack = null;
+
         try
         {
             if (state == NOT_INITIALIZED)
@@ -259,10 +285,13 @@ public class Handler extends BasicDataSink implements SourceTransferHandler,
 
                     // On Windows, you cannot delete a file if some process
                     // is using it.
+                    //
+                    Log.comment("Path=" + pathName);
 
                     file = new File(pathName);
                     if (file.exists())
                     {
+                        Log.comment("File exists, deleting");
                         if (!deleteFile(file))
                         {
                             System.err.println("datasink open: Existing file "
@@ -320,6 +349,7 @@ public class Handler extends BasicDataSink implements SourceTransferHandler,
                     {
                         // Catch the exception for debugging purpose and
                         // throw it again
+                        Log.comment("IO Exception " + e);
                         System.err
                                 .println("datasink open: IOException when creating RandomAccessFile "
                                         + pathName + " : " + e);
@@ -344,6 +374,7 @@ public class Handler extends BasicDataSink implements SourceTransferHandler,
     // Asynchronous write thread
     public void run()
     {
+        Log.comment("Running");
         while (!(state == CLOSED || errorEncountered))
         {
             synchronized (bufferLock)
@@ -397,6 +428,11 @@ public class Handler extends BasicDataSink implements SourceTransferHandler,
                 }
             }
         }
+
+        Log.comment("Exitted loop state=" + state +
+                     ", error=" + errorEncountered +
+                     ", receivedEOS=" + receivedEOS);
+
         if (receivedEOS)
         {
             if (DEBUG)
@@ -444,7 +480,7 @@ public class Handler extends BasicDataSink implements SourceTransferHandler,
     /**
      * Set the output <tt>MediaLocator</tt>. This method should only be called
      * once; an error is thrown if the locator has already been set.
-     * 
+     *
      * @param output
      *            <tt>MediaLocator</tt> that describes where the output goes.
      */
@@ -545,8 +581,44 @@ public class Handler extends BasicDataSink implements SourceTransferHandler,
         int totalRead = 0;
         int spaceAvailable = BUFFER_LEN;
         int bytesRead = 0;
+
+        // The way this class works is that we, in this method, want to put
+        // bytes in the buffers for run to send.  That is running on another
+        // thread, so we will wait for it, if the buffers are currently full.
+        //
+        // However, there are windows in which run has terminated, in which
+        // case waiting for it is not a terribly sensible thing to do.  Not
+        // least because we may be on the EDT, which would hang the whole app.
+        //
+        // So we return if there has been an error (generated inside this
+        // class), that's easy.
+        //
+        // But if someone has already called close, then it's a bit more
+        // interesting.  We may, for example be trying to write the footer
+        // bytes for the file.  If that is the case, then we'd very much like
+        // to know who has closed the file before we are done.  So the plan is
+        //   - to return if someone has already closed the Handler
+        //   - but not before tracing out the stack of the caller to close to
+        //     try to track down any potential premature closer.
+        //
         if (errorEncountered)
+        {
+            Log.comment("Error previously encountered, returning");
             return;
+        }
+
+        if (state == CLOSED)
+        {
+            Log.comment("Someone previously called close!");
+
+            if (closeCallerStack != null)
+            {
+              Log.comment("Closer stack, and our stack...");
+              Log.dumpStack(closeCallerStack);
+              Log.dumpStack(new Throwable());
+            }
+            return;
+        }
 
         if (buffer1Pending)
         {
@@ -679,8 +751,10 @@ public class Handler extends BasicDataSink implements SourceTransferHandler,
                     fileSize = filePointer;
                 Thread.yield();
             }
-        } catch (IOException ioe)
+        }
+        catch (IOException ioe)
         {
+            Log.comment("Hit IO exception writing: " + ioe);
             errorEncountered = true;
             errorReason = ioe.toString();
         }
@@ -717,8 +791,10 @@ public class Handler extends BasicDataSink implements SourceTransferHandler,
             {
                 sendEndofStreamEvent();
             }
-        } catch (Exception e)
+        }
+        catch (Exception e)
         {
+            Log.comment("Hit exception writing: " + e);
             errorCreatingStreamingFile = true;
             System.err
                     .println("Exception when creating streamable version of media file: "
