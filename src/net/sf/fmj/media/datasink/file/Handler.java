@@ -1,3 +1,14 @@
+/*
+ * This class does the work of writing a file to disk.
+ *
+ * The mechanism is that the "run" method writes the bytes to disk, and waits
+ * for transferData to put bytes into the buffer variables.  The majority of
+ * the complexity is the transfer of data between the caller and the writing
+ * thread.  Also, there is pleanty of complexity organising calls to
+ * "open/close/seek" and the writing thread.
+ *
+ */
+
 package net.sf.fmj.media.datasink.file;
 
 import java.io.File;
@@ -613,9 +624,8 @@ public class Handler extends BasicDataSink implements SourceTransferHandler,
 
             if (closeCallerStack != null)
             {
-              Log.comment("Closer stack, and our stack...");
-              Log.dumpStack(closeCallerStack);
-              Log.dumpStack(new Throwable());
+                Log.dumpStack("Our stack, and then closer stack...");
+                Log.dumpStack(closeCallerStack);
             }
             return;
         }
