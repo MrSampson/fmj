@@ -537,7 +537,8 @@ public class AudioFormat extends Format
                 + ((frameSizeInBits != NOT_SPECIFIED) ? (", FrameSize="
                         + frameSizeInBits + " bits") : "")
                 + ((dataType != Format.byteArray && dataType != null) ? ", "
-                        + dataType : "");
+                        + dataType : "")
+                + "," + getClass() + "@" + hashCode();
     }
 
 }
