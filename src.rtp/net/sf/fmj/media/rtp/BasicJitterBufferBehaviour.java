@@ -73,6 +73,18 @@ class BasicJitterBufferBehaviour
     }
 
     /**
+     * {@inheritDoc}
+     *
+     * <tt>BasicJitterBufferBehaviour</tt> implements a fixed jitter buffer and,
+     * consequently, returns {@link #getMaximumDelay()}.
+     */
+    @Override
+    public int getAbsoluteMaximumDelay()
+    {
+        return getMaximumDelay();
+    }
+
+    /**
      * Gets the <tt>BufferControl</tt> implementation set on the associated
      * <tt>RTPSourceStream</tt>. Provided as a convenience which delegates to
      * {@link RTPSourceStream#getBufferControl()}.
@@ -83,6 +95,30 @@ class BasicJitterBufferBehaviour
     protected BufferControl getBufferControl()
     {
         return stream.getBufferControl();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <tt>BasicJitterBufferBehaviour</tt> does not have a notion of RTP packet
+     * duration and, consequently, returns <tt>65535</tt>.
+     */
+    @Override
+    public int getMaximumDelay()
+    {
+        return 65535;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <tt>BasicJitterBufferBehaviour</tt> does not have a notion of RTP packet
+     * duration and, consequently, returns <tt>0</tt>.
+     */
+    @Override
+    public int getNominalDelay()
+    {
+        return 0;
     }
 
     /**

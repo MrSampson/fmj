@@ -1,17 +1,19 @@
 package net.sf.fmj.media.rtp;
 
-import java.net.*;
-import java.util.*;
+import java.net.InetAddress;
+import java.util.Enumeration;
+import java.util.Hashtable;
 
-import javax.media.format.*;
-import javax.media.rtp.*;
-import javax.media.rtp.event.*;
+import javax.media.format.AudioFormat;
+import javax.media.rtp.ReceiveStream;
+import javax.media.rtp.event.LocalCollisionEvent;
+import javax.media.rtp.event.RemoteCollisionEvent;
 
-import net.sf.fmj.media.rtp.util.*;
+import net.sf.fmj.media.rtp.util.SSRCTable;
 
 public class SSRCCache
 {
-    SSRCTable cache;
+    SSRCTable<SSRCInfo> cache;
     RTPSourceInfoCache sourceInfoCache;
     OverallStats stats;
     OverallTransStats transstats;
@@ -38,7 +40,7 @@ public class SSRCCache
 
     SSRCCache(RTPSessionMgr sm)
     {
-        cache = new SSRCTable();
+        cache = new SSRCTable<SSRCInfo>();
         stats = null;
         transstats = null;
         clockrate = new int[128];
@@ -65,7 +67,7 @@ public class SSRCCache
 
     SSRCCache(RTPSessionMgr sm, RTPSourceInfoCache sic)
     {
-        cache = new SSRCTable();
+        cache = new SSRCTable<SSRCInfo>();
         stats = null;
         transstats = null;
         clockrate = new int[128];
@@ -91,13 +93,12 @@ public class SSRCCache
     int aliveCount()
     {
         int tot = 0;
-        for (Enumeration e = cache.elements(); e.hasMoreElements();)
+        for (Enumeration<SSRCInfo> e = cache.elements(); e.hasMoreElements();)
         {
-            SSRCInfo s = (SSRCInfo) e.nextElement();
+            SSRCInfo s = e.nextElement();
             if (s.alive)
                 tot++;
         }
-
         return tot;
     }
 
@@ -200,18 +201,18 @@ public class SSRCCache
                         info.address = address;
                         info.port = port;
                     } else if (!info.address.equals(address))
-                    {
-                        stats.update(4, 1);
-                        transstats.remote_coll++;
-                        RemoteCollisionEvent evt = new RemoteCollisionEvent(sm,
-                                info.ssrc);
-                        eventhandler.postEvent(evt);
-                        SSRCInfo ssrcinfo5 = null;
-                        return ssrcinfo5;
-                    }
+                        {
+                            stats.update(OverallStats.REMOTECOLL, 1);
+                            transstats.remote_coll++;
+                            RemoteCollisionEvent evt = new RemoteCollisionEvent(
+                                    sm, info.ssrc);
+                            eventhandler.postEvent(evt);
+                            SSRCInfo ssrcinfo5 = null;
+                            return ssrcinfo5;
+                        }
                 }
             }
-            
+
             if (info != null && mode == 1 && !(info instanceof RecvSSRCInfo))
             {
                 if (info.ours)
@@ -281,7 +282,7 @@ public class SSRCCache
         return info;
     }
 
-    SSRCTable getMainCache()
+    SSRCTable<SSRCInfo> getMainCache()
     {
         return cache;
     }
@@ -310,18 +311,18 @@ public class SSRCCache
         cache.put(newssrc, newinfo);
         changessrc(newinfo);
         ourssrc = newinfo;
-        stats.update(3, 1);
+        stats.update(OverallStats.LOCALCOLL, 1);
         transstats.local_coll++;
     }
 
     SSRCInfo lookup(int ssrc)
     {
-        return (SSRCInfo) cache.get(ssrc);
+        return cache.get(ssrc);
     }
 
     void remove(int ssrc)
     {
-        SSRCInfo info = (SSRCInfo) cache.remove(ssrc);
+        SSRCInfo info = cache.remove(ssrc);
         if (info != null)
             info.delete();
     }

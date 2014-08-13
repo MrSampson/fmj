@@ -1,15 +1,22 @@
 package net.sf.fmj.media.rtp;
 
-import java.io.*;
-import java.net.*;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
-import javax.media.*;
-import javax.media.protocol.*;
-import javax.media.rtp.*;
-import javax.media.rtp.event.*;
+import javax.media.Format;
+import javax.media.protocol.PushBufferStream;
+import javax.media.rtp.ReceiveStream;
+import javax.media.rtp.SessionAddress;
+import javax.media.rtp.event.ActiveReceiveStreamEvent;
+import javax.media.rtp.event.NewReceiveStreamEvent;
+import javax.media.rtp.event.RemotePayloadChangeEvent;
 
-import net.sf.fmj.media.*;
-import net.sf.fmj.media.rtp.util.*;
+import net.sf.fmj.media.Log;
+import net.sf.fmj.media.rtp.util.Packet;
+import net.sf.fmj.media.rtp.util.PacketFilter;
+import net.sf.fmj.media.rtp.util.RTPPacket;
+import net.sf.fmj.media.rtp.util.UDPPacket;
 
 /**
  * @author Damian Minkov
@@ -44,6 +51,9 @@ public class RTPReceiver extends PacketFilter
     private int numPackets = 0;
     private static final int MAX_DROPOUT = 3000;
     private static final int MAX_MISORDER = 100;
+
+    static final int SEQ_MOD = 0x10000;
+    static final int MIN_SEQUENTIAL = 2;
 
     //BufferControl initialized
     private boolean initBC = false;
@@ -203,6 +213,70 @@ public class RTPReceiver extends PacketFilter
         ssrcinfo.lastPayloadType = rtpPacket.payloadType;
         ssrcinfo.bytesreceived += rtpPacket.payloadlength;
         ssrcinfo.lastHeardFrom = ((Packet) (rtpPacket)).receiptTime;
+
+        int diff = rtpPacket.seqnum - ssrcinfo.maxseq;
+        if (diff > 0)
+        {
+            if (ssrcinfo.maxseq + 1 != rtpPacket.seqnum)
+                ssrcinfo.stats.update(RTPStats.PDULOST, diff - 1);
+        }
+        else if (diff < 0)
+        {
+            // Packets arriving out of order have already been counted as lost
+            // (by the clause above), so decrease the lost count.
+            if (diff > -MAX_MISORDER)
+                ssrcinfo.stats.update(RTPStats.PDULOST, -1);
+        }
+        if (ssrcinfo.wrapped)
+            ssrcinfo.wrapped = false;
+        boolean flag = false;
+
+
+        net.sf.fmj.media.protocol.rtp.DataSource datasource = (net.sf.fmj.media.protocol.rtp.DataSource) cache.sm.dslist.get(ssrcinfo.ssrc);
+
+        if (datasource == null)
+        {
+            net.sf.fmj.media.protocol.rtp.DataSource dataSource = cache.sm.getDataSource(null);
+            if (dataSource == null)
+            {
+                datasource = cache.sm.createNewDS(null);
+                cache.sm.setDefaultDSassigned(ssrcinfo.ssrc);
+            }
+            else if (!cache.sm.isDefaultDSassigned())
+            {
+                datasource = dataSource;
+                cache.sm.setDefaultDSassigned(ssrcinfo.ssrc);
+            }
+            else
+            {
+                datasource = cache.sm.createNewDS(ssrcinfo.ssrc);
+            }
+        }
+
+        javax.media.protocol.PushBufferStream apushbufferstream[] =
+                                                       datasource.getStreams();
+
+        ssrcinfo.dsource = datasource;
+        ssrcinfo.dstream = (RTPSourceStream) apushbufferstream[0];
+        ssrcinfo.dstream.setFormat(ssrcinfo.currentformat);
+
+        RTPControlImpl rtpControlImpl =
+                     (RTPControlImpl) ssrcinfo.dsource.getControl(controlName);
+
+        if (rtpControlImpl != null)
+        {
+            Format format = cache.sm.formatinfo.get(rtpPacket.payloadType);
+            rtpControlImpl.currentformat = format;
+             rtpControlImpl.stream = ssrcinfo;
+        }
+
+        ssrcinfo.streamconnect = true;
+
+
+        if (ssrcinfo.dsource != null)
+        {
+            ssrcinfo.active = true;
+        }
     }
 
     private void fireNewReceiveStreamEventIfRequired(SSRCInfo ssrcinfo)

@@ -34,6 +34,12 @@ public class RTPSourceStream
 
     private boolean bufferWhenStopped = true;
 
+    /**
+     * The <tt>DataSource</tt> which has initialized and has this instance as
+     * its <tt>sourceStream</tt>.
+     */
+    final DataSource datasource;
+
     private Format format;
 
     private boolean hasRead = false;
@@ -75,6 +81,7 @@ public class RTPSourceStream
         Log.objectCreated(this, "RTPSourceStream");
         Log.createLink(this, datasource, "RTPSourceStream uses datasource");
         datasource.setSourceStream(this);
+        this.datasource = datasource;
 
         q = new JitterBuffer(8);
         stats = new JitterBufferStats(this);
@@ -273,7 +280,7 @@ public class RTPSourceStream
     public Object getControl(String controlType)
     {
         return
-            PacketQueueControl.class.getName().equals(controlType)
+            JitterBufferControl.class.getName().equals(controlType)
                 ? stats
                 : super.getControl(controlType);
     }
