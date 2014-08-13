@@ -94,6 +94,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
     int defaultsourceid = 0;
     Vector sendstreamlist = null;
     RTPTransmitter rtpTransmitter = null;
+    private RTCPReportBuilder rtcpReportBuilder;
     boolean bds = false;
     Vector peerlist = null;
     boolean multi_unicast = false;
@@ -2196,6 +2197,11 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         }
     }
 
+    public void setRTCPReportBuilder(RTCPReportBuilder rtcpReportBuilder)
+    {
+        this.rtcpReportBuilder = rtcpReportBuilder;
+    }
+
     void setSessionBandwidth(int i)
     {
         cache.sessionbandwidth = i;
@@ -2273,6 +2279,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
                         .getControlAddress().getHostAddress(), udppacketsender);
         rtcpTransmitter = new RTCPTransmitter(cache, rtcprawsender);
         rtcpTransmitter.setSSRCInfo(cache.ourssrc);
+        rtcpTransmitter.setReportBuilder(rtcpReportBuilder);
         RTCPReporter rtcpreporter = new RTCPReporter(cache, rtcpTransmitter);
         startedparticipating = true;
         return rtcpreporter;
@@ -2301,6 +2308,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         RTCPTransmitter rtcptransmitter = new RTCPTransmitter(cache,
                 rtcprawsender);
         rtcptransmitter.setSSRCInfo(ssrcinfo);
+        rtcptransmitter.setReportBuilder(rtcpReportBuilder);
         return new RTCPReporter(cache, rtcptransmitter);
     }
 
@@ -2322,6 +2330,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         RTCPTransmitter rtcptransmitter = new RTCPTransmitter(cache,
                 rtcprawsender);
         rtcptransmitter.setSSRCInfo(ssrcinfo);
+        rtcptransmitter.setReportBuilder(rtcpReportBuilder);
         return new RTCPReporter(cache, rtcptransmitter);
     }
 
@@ -2334,6 +2343,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         RTCPTransmitter rtcptransmitter = new RTCPTransmitter(cache,
                 rtcprawsender);
         rtcptransmitter.setSSRCInfo(ssrcinfo);
+        rtcptransmitter.setReportBuilder(rtcpReportBuilder);
         return new RTCPReporter(cache, rtcptransmitter);
     }
 
@@ -2372,6 +2382,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
         RTCPTransmitter rtcptransmitter = new RTCPTransmitter(cache,
                 rtcprawsender);
         rtcptransmitter.setSSRCInfo(ssrcinfo);
+        rtcptransmitter.setReportBuilder(rtcpReportBuilder);
         return new RTCPReporter(cache, rtcptransmitter);
     }
 

@@ -5,6 +5,7 @@ import java.util.*;
 import javax.media.rtp.*;
 import javax.media.rtp.event.*;
 
+import net.sf.fmj.media.Log;
 import net.sf.fmj.media.rtp.util.*;
 
 public class SSRCCacheCleaner implements Runnable
@@ -16,13 +17,11 @@ public class SSRCCacheCleaner implements Runnable
     boolean timeToClean;
     private boolean killed;
     private StreamSynch streamSynch;
-    private long lastCleaned;
 
     public SSRCCacheCleaner(SSRCCache cache, StreamSynch streamSynch)
     {
         timeToClean = false;
         killed = false;
-        lastCleaned = -1;
         this.cache = cache;
         this.streamSynch = streamSynch;
         thread = new RTPMediaThread(this, "SSRC Cache Cleaner");
@@ -33,31 +32,57 @@ public class SSRCCacheCleaner implements Runnable
 
     public synchronized void cleannow()
     {
+        Log.annotate(this, "Enter cleannow");
         long time = System.currentTimeMillis();
-        lastCleaned = time;
         if (cache.ourssrc == null)
+        {
+            Log.annotate(this, "Exit right away - ourssrc is null");
             return;
+        }
+
         double reportInterval
             = cache.calcReportInterval(cache.ourssrc.sender, true);
+<<<<<<< HEAD
+        for (Enumeration elements = cache.cache.elements();
+=======
         synchronized (cache.cache)
         {
         for (Enumeration<SSRCInfo> elements = cache.cache.elements();
+>>>>>>> 14af396... Move to r65
                 elements.hasMoreElements();)
         {
-            SSRCInfo info = elements.nextElement();
+            SSRCInfo info = (SSRCInfo) elements.nextElement();
             if (!info.ours)
+            {
                 if (info.byeReceived)
                 {
                     if (time - info.byeTime < 1000L)
                     {
-                        try
+                        // We've received a BYE.  Wait 1s before posting the
+                        // related event.
+                        // SGD - why? Presumably to ensure we've got all the
+                        // info related to the stream before finishing?
+                        long wakeTime = info.byeTime + 1000L;
+                        long now = System.currentTimeMillis();
+                        while (now < wakeTime)
                         {
-                            Thread.sleep((1000L - time) + info.byeTime);
+                            try
+                            {
+                                // Don't block this class while waiting (use
+                                // this.wait() rather than Thread.sleep()).
+                                long sleep = wakeTime - now;
+                                Log.annotate(this, "Wait for " + sleep + "ms");
+                                this.wait(sleep);
+                            }
+                            catch (InterruptedException e)
+                            {
+                                // Wait to do our cleanup.
+                                Log.annotate(this, "Wait interrupted");
+                            }
+
+                            now = System.currentTimeMillis();
                         }
-                        catch (InterruptedException e)
-                        {
-                        }
-                        time = System.currentTimeMillis();
+                        time = now;
                     }
                     info.byeTime = 0L;
                     info.byeReceived = false;
@@ -92,7 +117,8 @@ public class SSRCCacheCleaner implements Runnable
                                     laststream);
                         } else
                         {
-                            if (info.lastHeardFrom + reportInterval * 5 <= time)
+                            reportInterval *= 5D;
+                            if (info.lastHeardFrom + reportInterval <= time)
                                 event = new InactiveReceiveStreamEvent(
                                         cache.sm, info.sourceInfo, null,
                                         laststream);
@@ -128,26 +154,26 @@ public class SSRCCacheCleaner implements Runnable
                         cache.eventhandler.postEvent(evt);
                     }
                 }
+            }
         }
         } //synchronized
 
+        Log.annotate(this, "Exit cleannow");
     }
 
+    @Override
     public synchronized void run()
     {
+        Log.annotate(this, "run");
         try
         {
             do
             {
-                if (!timeToClean && !killed)
-                    wait(5000);
+                while (!timeToClean && !killed)
+                    wait();
                 if (killed)
                     return;
-                if (!timeToClean
-                      && lastCleaned + 5000 <= System.currentTimeMillis())
-                    timeToClean = true;
-                if (timeToClean)
-                    cleannow();
+                cleannow();
                 timeToClean = false;
             } while (true);
         } catch (Exception e)
@@ -158,12 +184,14 @@ public class SSRCCacheCleaner implements Runnable
 
     public synchronized void setClean()
     {
+        Log.annotate(this, "setclean");
         timeToClean = true;
         notifyAll();
     }
 
     public synchronized void stop()
     {
+        Log.annotate(this, "stop");
         killed = true;
         notifyAll();
     }

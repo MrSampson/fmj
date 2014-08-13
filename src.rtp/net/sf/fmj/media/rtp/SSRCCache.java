@@ -13,7 +13,7 @@ import net.sf.fmj.media.rtp.util.SSRCTable;
 
 public class SSRCCache
 {
-    SSRCTable<SSRCInfo> cache;
+    public SSRCTable<SSRCInfo> cache;
     RTPSourceInfoCache sourceInfoCache;
     OverallStats stats;
     OverallTransStats transstats;
@@ -93,11 +93,14 @@ public class SSRCCache
     int aliveCount()
     {
         int tot = 0;
+        synchronized (cache)
+        {
         for (Enumeration<SSRCInfo> e = cache.elements(); e.hasMoreElements();)
         {
             SSRCInfo s = e.nextElement();
             if (s.alive)
                 tot++;
+        }
         }
         return tot;
     }
