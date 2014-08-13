@@ -245,16 +245,16 @@ public class MonitorAdapter implements MonitorControl, Owned
          * southPanel = new Panel(); listBox = new List(6); for (int i = 0; i <=
          * inFrameRate; i++) { listBox.add(i + " fps"); } southPanel.add(new
          * Label("Monitor Frame Rate : ")); southPanel.add(listBox);
-         * 
+         *
          * preferredSize = visualComponent.getPreferredSize();
          * preferredSize.height += southPanel.getPreferredSize().height;
-         * 
+         *
          * controlComponent = new Panel(new BorderLayout()) { public Dimension
          * getPreferredSize() { return preferredSize; } };
-         * 
+         *
          * controlComponent.add("Center", visualComponent);
          * controlComponent.add("South", southPanel);
-         * 
+         *
          * }
          */
 
@@ -391,6 +391,7 @@ public class MonitorAdapter implements MonitorControl, Owned
         buffer.setHeader(input.getHeader());
         buffer.setLength(input.getLength());
         buffer.setOffset(input.getOffset());
+        buffer.setRtpTimeStamp(input.getRtpTimeStamp());
         buffer.setTimeStamp(input.getTimeStamp());
 
         // Put the buffer into the queue.

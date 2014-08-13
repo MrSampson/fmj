@@ -29,12 +29,12 @@ import com.sun.jna.*;
 import com.sun.jna.ptr.*;
 
 /**
- * 
+ *
  * Demultiplexer which uses ffmpeg.java native wrapper around ffmpeg
  * (libavformat, libavcodec, libavutil, libswscale).
- * 
+ *
  * @author Ken Larson
- * 
+ *
  */
 public class FFMPEGParser extends AbstractDemultiplexer
 {
@@ -43,20 +43,11 @@ public class FFMPEGParser extends AbstractDemultiplexer
         // TODO: track listener
 
         private final int audioStreamIndex;
-        AVStream stream;
         private AVCodecContext codecCtx;
         private final AVCodec codec;
         private Pointer buffer;
         private int bufferSize;
         private final AudioFormat format;
-
-        /**
-         * We have to keep track of frame number ourselves.
-         * frame.display_picture_number seems to often always be zero. See:
-         * http:
-         * //lists.mplayerhq.hu/pipermail/ffmpeg-user/2005-September/001244.html
-         */
-        private long frameNo;
 
         public AudioTrack(int audioStreamIndex, AVStream stream,
                 AVCodecContext codecCtx) throws ResourceUnavailableException
@@ -64,7 +55,6 @@ public class FFMPEGParser extends AbstractDemultiplexer
             super();
 
             this.audioStreamIndex = audioStreamIndex;
-            this.stream = stream;
             this.codecCtx = codecCtx;
 
             synchronized (AV_SYNC_OBJ)
@@ -91,11 +81,6 @@ public class FFMPEGParser extends AbstractDemultiplexer
                 format = convertCodecAudioFormat(codecCtx);
             }
 
-        }
-
-        public boolean canSkipNanos()
-        {
-            return false;
         }
 
         // @Override
@@ -236,19 +221,6 @@ public class FFMPEGParser extends AbstractDemultiplexer
             }
 
         }
-
-        // TODO: implement seeking using av_seek_frame
-        /**
-         * 
-         * @return nanos skipped, 0 if unable to skip.
-         * @throws IOException
-         */
-        public long skipNanos(long nanos) throws IOException
-        {
-            return 0;
-
-        }
-
     }
 
     private abstract class PullSourceStreamTrack extends AbstractTrack
@@ -341,12 +313,6 @@ public class FFMPEGParser extends AbstractDemultiplexer
             }
         }
 
-        public boolean canSkipNanos()
-        {
-            return false;
-        }
-
-        // @Override
         @Override
         public void deallocate()
         {
@@ -510,19 +476,6 @@ public class FFMPEGParser extends AbstractDemultiplexer
                 return;
             }
         }
-
-        // TODO: implement seeking using av_seek_frame
-        /**
-         * 
-         * @return nanos skipped, 0 if unable to skip.
-         * @throws IOException
-         */
-        public long skipNanos(long nanos) throws IOException
-        {
-            return 0;
-
-        }
-
     }
 
     private static final Logger logger = LoggerSingleton.logger;
@@ -702,7 +655,7 @@ public class FFMPEGParser extends AbstractDemultiplexer
         /*
          * final AVRational time_base = getTimeBase(stream,
          * codecCtx);//codecCtx.time_base;
-         * 
+         *
          * // TODO: the frame rate is in frames, where half of an interlaced
          * frame counts as 1. so for interlaced video, // this has to be taken
          * into account. // for example safexmas.move is reported as : //
@@ -712,13 +665,13 @@ public class FFMPEGParser extends AbstractDemultiplexer
          * http://www.dranger.com/ffmpeg/tutorial05.html // for a good
          * discussion on pts. // TODO: for now, we'll just use the packetDts,
          * since pts seems to always be zero.
-         * 
+         *
          * if (packetDts == AVCodecLibrary.AV_NOPTS_VALUE) // TODO: with some
          * movies, pts is just always zero, so we'll handle it the same way. {
          * // If AV_NOPTS_VALUE then frame_rate = 1/time_base will be assumed.
          * // therefore we need to know the frame # return (1000000000L *
          * frameNo * (long) time_base.num) / (long) time_base.den;
-         * 
+         *
          * } else { // TODO: the code to do the calculation based on the dts is
          * wrong, so we'll just use the frame number based // calculation for
          * now. // not sure how to calculate the correct dts for a frame. // try
@@ -727,8 +680,8 @@ public class FFMPEGParser extends AbstractDemultiplexer
          * * packetDts * (long) time_base.num) / (long) time_base.den; // TODO:
          * is this correct? it appears to be based on the AVFrame comment, but
          * has not been tested yet.
-         * 
-         * 
+         *
+         *
          * }
          */
         double pts;
@@ -846,7 +799,7 @@ public class FFMPEGParser extends AbstractDemultiplexer
     }
 
     /**
-     * 
+     *
      * @param streamIndex
      *            the track/stream index
      * @return null on EOM
@@ -1047,7 +1000,9 @@ public class FFMPEGParser extends AbstractDemultiplexer
 
     protected void queryInputContentDescriptors()
     {
-        Map additionalFormatMimeTypes = new HashMap();
+        Map<String,String[]> additionalFormatMimeTypes
+            = new HashMap<String,String[]>();
+
         additionalFormatMimeTypes.put("4xm", FOURXM_MIMETYPE); // Format of some
                                                                // games by 4X
                                                                // Technologies
@@ -1220,7 +1175,8 @@ public class FFMPEGParser extends AbstractDemultiplexer
 
         // map with mimetype as key and content descriptor as value to avoid
         // multiple descriptors
-        Map mimeTypes = new HashMap();
+        Map<String,ContentDescriptor> mimeTypes
+            = new HashMap<String,ContentDescriptor>();
         int i = 1;
 
         AVInputFormat avInputFormat = AVFORMAT

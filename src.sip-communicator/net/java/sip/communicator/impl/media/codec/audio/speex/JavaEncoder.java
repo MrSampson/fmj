@@ -15,13 +15,12 @@ import org.xiph.speex.*;
 
 /**
  * The Speex Encoder
- * 
+ *
  * @author Damian Minkov
  */
 public class JavaEncoder extends com.ibm.media.codec.audio.AudioCodec
 {
     private Format lastFormat = null;
-    private int numberOfChannels = 0;
 
     private static int FRAME_SIZE = 320;
 
@@ -60,10 +59,8 @@ public class JavaEncoder extends com.ibm.media.codec.audio.AudioCodec
     private void initConverter(AudioFormat inFormat)
     {
         lastFormat = inFormat;
-        numberOfChannels = inFormat.getChannels();
 
         encoder = new SpeexEncoder();
-
         encoder.init(0, 4, (int) inFormat.getSampleRate(), 1);
     }
 

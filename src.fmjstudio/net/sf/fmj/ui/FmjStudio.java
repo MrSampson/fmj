@@ -2,7 +2,6 @@ package net.sf.fmj.ui;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.util.logging.*;
 
 import javax.swing.*;
 
@@ -15,18 +14,16 @@ import com.lti.utils.*;
 
 /**
  * Main class for the FMJ media player application.
- * 
+ *
  * @author Warren Bloomer
  * @author Ken Larson
- * 
+ *
  */
 public class FmjStudio
 {
-    private static final Logger logger = LoggerSingleton.logger;
-
     /**
      * Main method.
-     * 
+     *
      * @param args
      *            the arguments pased to this application
      */
@@ -251,7 +248,7 @@ public class FmjStudio
 
     /**
      * Display the registry editor frame
-     * 
+     *
      */
     private void onOpenRegistryEditor()
     {
@@ -273,7 +270,7 @@ public class FmjStudio
     }
 
     /**
-     * 
+     *
      * @param args
      */
     private void run(String[] args)

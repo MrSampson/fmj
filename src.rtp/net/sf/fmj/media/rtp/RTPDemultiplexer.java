@@ -1,7 +1,6 @@
 package net.sf.fmj.media.rtp;
 
 import javax.media.*;
-import javax.media.format.*;
 
 import net.sf.fmj.media.rtp.util.*;
 
@@ -26,11 +25,6 @@ public class RTPDemultiplexer
         return "RTP DeMultiplexer";
     }
 
-    //public void demuxpayload(Packet p)
-    //{
-    //    demuxpayload(p);
-    //}
-
     public void demuxpayload(SourceRTPPacket sp)
     {
         SSRCInfo info = sp.ssrcinfo;
@@ -39,7 +33,7 @@ public class RTPDemultiplexer
         if (info.dstream != null)
         {
             buffer.setData(rtpPacket.base.data);
-            buffer.setFlags(0);
+            buffer.setFlags(rtpPacket.flags);
             if (rtpPacket.marker == 1)
                 buffer.setFlags(buffer.getFlags() | Buffer.FLAG_RTP_MARKER);
             buffer.setLength(rtpPacket.payloadlength);
@@ -48,6 +42,7 @@ public class RTPDemultiplexer
             long ts = streamSynch.calcTimestamp(info.ssrc, rtpPacket.payloadType,
                     rtpPacket.timestamp);
             buffer.setTimeStamp(ts);
+            buffer.setRtpTimeStamp(rtpPacket.timestamp);
 
             buffer.setFlags(buffer.getFlags() | Buffer.FLAG_RTP_TIME);
             buffer.setSequenceNumber(rtpPacket.seqnum);

@@ -56,12 +56,11 @@ public abstract class AbstractControlPanel extends JPanel
     public static final int USE_GAINMETER_CONTROL = 128;
 
     private AbstractControls controls;
-    private Player player;
     protected final Skin skin;
 
     /**
      * Create a Control Panel with complete suite of Controls
-     * 
+     *
      * @param player
      *            Player with which control panel is associated.
      */
@@ -73,7 +72,7 @@ public abstract class AbstractControlPanel extends JPanel
     /**
      * Create a Control panel with those Controls identified by <tt>flags</tt>
      * argument associated with <tt>player</tt>.
-     * 
+     *
      * @param player
      *            Player with which control panel is associated.
      * @param flags
@@ -85,14 +84,13 @@ public abstract class AbstractControlPanel extends JPanel
         this.skin = skin;
         setControlPanelLayout();
         setControlPanelBorder();
-        this.player = player;
         controls = createControls(player);
         addComponents(flags);
     }
 
     /**
      * Add appropriate Components to Control Panel.
-     * 
+     *
      * @param flags
      *            Is the bit-wise OR of some number of Control identifiers, e.g.
      *            USE_START_CONTROL. OR'd value of USE values that determine
@@ -102,7 +100,7 @@ public abstract class AbstractControlPanel extends JPanel
 
     /**
      * Create the Controls to be displayed in the Control Panel.
-     * 
+     *
      * @param player
      *            Playera with which control panel is associated.
      */
@@ -142,7 +140,7 @@ public abstract class AbstractControlPanel extends JPanel
      * <p>
      * If default layout is changed by a subclass, this method may need to be
      * overridden.
-     * 
+     *
      * @param c
      *            Existing component
      * @param withComponent
@@ -168,7 +166,7 @@ public abstract class AbstractControlPanel extends JPanel
      * <p>
      * If default layout is changed by a subclass, this method may need to be
      * overridden.
-     * 
+     *
      * @param withComponent
      *            New component to be installed in control panel.
      * @param atIndex

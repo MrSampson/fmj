@@ -104,7 +104,7 @@ public class RTCPReceiver implements PacketConsumer
         default:
             break;
 
-        case -1:
+        case RTCPPacket.COMPOUND:
             RTCPCompoundPacket rtcpcompoundpacket = (RTCPCompoundPacket) rtcppacket;
             cache.updateavgrtcpsize(((Packet) (rtcpcompoundpacket)).length);
             for (int j = 0; j < rtcpcompoundpacket.packets.length; j++)
@@ -114,7 +114,7 @@ public class RTCPReceiver implements PacketConsumer
                 cache.sm.cleaner.setClean();
             break;
 
-        case 200:
+        case RTCPPacket.SR:
             RTCPSRPacket rtcpsrpacket = (RTCPSRPacket) rtcppacket;
             type = 1;
             if (rtcppacket.base instanceof UDPPacket)
@@ -151,8 +151,7 @@ public class RTCPReceiver implements PacketConsumer
             {
                 rtcpsrpacket.reports[k].receiptTime = ((Packet) (rtcpsrpacket)).receiptTime;
                 int l = rtcpsrpacket.reports[k].ssrc;
-                RTCPReportBlock artcpreportblock[] = (RTCPReportBlock[]) ssrcinfo.reports
-                        .get(l);
+                RTCPReportBlock artcpreportblock[] = ssrcinfo.reports.get(l);
                 if (artcpreportblock == null)
                 {
                     artcpreportblock = new RTCPReportBlock[2];
@@ -186,7 +185,7 @@ public class RTCPReceiver implements PacketConsumer
             cache.eventhandler.postEvent(senderreportevent);
             break;
 
-        case 201:
+        case RTCPPacket.RR:
             RTCPRRPacket rtcprrpacket = (RTCPRRPacket) rtcppacket;
             type = 2;
             if (rtcppacket.base instanceof UDPPacket)
@@ -217,8 +216,7 @@ public class RTCPReceiver implements PacketConsumer
             {
                 rtcprrpacket.reports[i1].receiptTime = ((Packet) (rtcprrpacket)).receiptTime;
                 int j1 = rtcprrpacket.reports[i1].ssrc;
-                RTCPReportBlock artcpreportblock1[] = (RTCPReportBlock[]) ssrcinfo.reports
-                        .get(j1);
+                RTCPReportBlock artcpreportblock1[] = ssrcinfo.reports.get(j1);
                 if (artcpreportblock1 == null)
                 {
                     artcpreportblock1 = new RTCPReportBlock[2];
@@ -243,7 +241,7 @@ public class RTCPReceiver implements PacketConsumer
             cache.eventhandler.postEvent(receiverreportevent);
             break;
 
-        case 202:
+        case RTCPPacket.SDES:
             RTCPSDESPacket rtcpsdespacket = (RTCPSDESPacket) rtcppacket;
             for (int k1 = 0; k1 < rtcpsdespacket.sdes.length; k1++)
             {
@@ -289,7 +287,7 @@ public class RTCPReceiver implements PacketConsumer
             type = 0;
             break;
 
-        case 203:
+        case RTCPPacket.BYE:
             RTCPBYEPacket rtcpbyepacket = (RTCPBYEPacket) rtcppacket;
             SSRCInfo ssrcinfo1;
             if (rtcppacket.base instanceof UDPPacket)
@@ -357,7 +355,7 @@ public class RTCPReceiver implements PacketConsumer
             cache.remove(ssrcinfo1.ssrc);
             break;
 
-        case 204:
+        case RTCPPacket.APP:
             RTCPAPPPacket rtcpapppacket = (RTCPAPPPacket) rtcppacket;
             SSRCInfo ssrcinfo2;
             if (rtcppacket.base instanceof UDPPacket)

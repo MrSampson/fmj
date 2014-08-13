@@ -16,11 +16,13 @@ public class SSRCCacheCleaner implements Runnable
     boolean timeToClean;
     private boolean killed;
     private StreamSynch streamSynch;
+    private long lastCleaned;
 
     public SSRCCacheCleaner(SSRCCache cache, StreamSynch streamSynch)
     {
         timeToClean = false;
         killed = false;
+        lastCleaned = -1;
         this.cache = cache;
         this.streamSynch = streamSynch;
         thread = new RTPMediaThread(this, "SSRC Cache Cleaner");
@@ -32,14 +34,15 @@ public class SSRCCacheCleaner implements Runnable
     public synchronized void cleannow()
     {
         long time = System.currentTimeMillis();
+        lastCleaned = time;
         if (cache.ourssrc == null)
             return;
         double reportInterval
             = cache.calcReportInterval(cache.ourssrc.sender, true);
-        for (Enumeration elements = cache.cache.elements();
+        for (Enumeration<SSRCInfo> elements = cache.cache.elements();
                 elements.hasMoreElements();)
         {
-            SSRCInfo info = (SSRCInfo) elements.nextElement();
+            SSRCInfo info = elements.nextElement();
             if (!info.ours)
                 if (info.byeReceived)
                 {
@@ -87,8 +90,7 @@ public class SSRCCacheCleaner implements Runnable
                                     laststream);
                         } else
                         {
-                            reportInterval *= 5D;
-                            if (info.lastHeardFrom + reportInterval <= time)
+                            if (info.lastHeardFrom + reportInterval * 5 <= time)
                                 event = new InactiveReceiveStreamEvent(
                                         cache.sm, info.sourceInfo, null,
                                         laststream);
@@ -134,11 +136,15 @@ public class SSRCCacheCleaner implements Runnable
         {
             do
             {
-                while (!timeToClean && !killed)
-                    wait();
+                if (!timeToClean && !killed)
+                    wait(5000);
                 if (killed)
                     return;
-                cleannow();
+                if (!timeToClean
+                      && lastCleaned + 5000 <= System.currentTimeMillis())
+                    timeToClean = true;
+                if (timeToClean)
+                    cleannow();
                 timeToClean = false;
             } while (true);
         } catch (Exception e)

@@ -40,7 +40,7 @@ public abstract class SSRCInfo implements Report
     boolean ours;
     int ssrc;
     boolean streamconnect;
-    SSRCTable reports;
+    SSRCTable<RTCPReportBlock[]> reports;
     boolean active;
     boolean newrecvstream;
     boolean recvstrmap;
@@ -105,7 +105,7 @@ public abstract class SSRCInfo implements Report
         sender = false;
         ours = false;
         streamconnect = false;
-        reports = new SSRCTable();
+        reports = new SSRCTable<RTCPReportBlock[]>();
         active = false;
         newrecvstream = false;
         recvstrmap = false;
@@ -125,7 +125,6 @@ public abstract class SSRCInfo implements Report
         lasttimestamp = 0L;
         lastPayloadType = -1;
         jitter = 0.0D;
-        stats = null;
         clockrate = 0;
         this.cache = cache;
         this.ssrc = ssrc;
@@ -147,11 +146,8 @@ public abstract class SSRCInfo implements Report
         tool = null;
         note = null;
         priv = null;
-        lastSRntptimestamp = 0L;
-        lastSRrtptimestamp = 0L;
         lastSRoctetcount = 0L;
         lastSRpacketcount = 0L;
-        lastRTCPreceiptTime = 0L;
         lastSRreceiptTime = 0L;
         lastHeardFrom = 0L;
         quiet = false;
@@ -159,7 +155,7 @@ public abstract class SSRCInfo implements Report
         sender = false;
         ours = false;
         streamconnect = false;
-        reports = new SSRCTable();
+        reports = new SSRCTable<RTCPReportBlock[]>();
         active = false;
         newrecvstream = false;
         recvstrmap = false;
@@ -170,16 +166,13 @@ public abstract class SSRCInfo implements Report
         wassender = false;
         currentformat = null;
         payloadType = -1;
-        dsource = null;
         pds = null;
-        dstream = null;
         sinkstream = null;
         maxseq = 0;
         cycles = 0;
         lasttimestamp = 0L;
         lastPayloadType = -1;
         jitter = 0.0D;
-        stats = null;
         clockrate = 0;
         cache = info.cache;
         alive = info.alive;
@@ -338,24 +331,19 @@ public abstract class SSRCInfo implements Report
         return sourceInfo != null ? sourceInfo.getCNAME() : null;
     }
 
-    public Vector getFeedbackReports()
+    public Vector<RTCPReportBlock> getFeedbackReports()
     {
-        RTCPReportBlock reportblklist[] = null;
-        Vector reportlist;
+        Vector<RTCPReportBlock> reportlist
+            = new Vector<RTCPReportBlock>(reports.size());
         if (reports.size() == 0)
-        {
-            reportlist = new Vector(0);
             return reportlist;
-        }
-        reportlist = new Vector(reports.size());
-        Enumeration reportblks = reports.elements();
+        Enumeration<RTCPReportBlock[]> reportblks = reports.elements();
         try
         {
             while (reportblks.hasMoreElements())
             {
-                reportblklist = (RTCPReportBlock[]) reportblks.nextElement();
-                RTCPReportBlock report = new RTCPReportBlock();
-                report = reportblklist[0];
+                RTCPReportBlock[] reportblklist = reportblks.nextElement();
+                RTCPReportBlock report = reportblklist[0];
                 reportlist.addElement(report);
             }
         } catch (NoSuchElementException e)
@@ -385,9 +373,9 @@ public abstract class SSRCInfo implements Report
         return sourceInfo;
     }
 
-    public Vector getSourceDescription()
+    public Vector<SourceDescription> getSourceDescription()
     {
-        Vector sdeslist = new Vector();
+        Vector<SourceDescription> sdeslist = new Vector<SourceDescription>();
         sdeslist.addElement(sourceInfo.getCNAMESDES());
         if (name != null)
             sdeslist.addElement(name);
@@ -597,6 +585,22 @@ public abstract class SSRCInfo implements Report
                     break;
                 }
         }
+    }
 
+    /**
+     * Gets the number of expected packets since the beginning of
+     * reception/transmission as defined by RFC 3550 i.e. the extended last
+     * sequence number received less the initial sequence number received.
+     *
+     * @return the number of expected packets since the beginning of
+     * reception/transmission
+     */
+    public long getExpectedPacketCount()
+    {
+        long maxseq = this.maxseq & 0xFFFFL;
+        long cycles = this.cycles;
+        long baseseq = this.baseseq & 0xFFFFL;
+
+        return maxseq + cycles - baseseq + 1;
     }
 }

@@ -17,7 +17,7 @@ import net.sf.fmj.utility.*;
  * This type of MOV file just stores frames as a series of JPEG images. This
  * codec uses ImageIO classes to convert from the jpeg VideoFormat to
  * RGBFormats.
- * 
+ *
  * @author Jeremy Wood
  */
 public class JPEGDecoder implements Codec
@@ -28,15 +28,16 @@ public class JPEGDecoder implements Codec
     private static final RGBFormat rgbFormat = new RGBFormat(null, -1,
             Format.intArray, -1.f, -1, -1, -1, -1);
 
-    static Hashtable imageTable = new Hashtable();
+    static Hashtable<Dimension, BufferedImage> imageTable
+        = new Hashtable<Dimension, BufferedImage>();
 
     protected static void readJPEG(byte[] data, BufferedImage dest)
             throws IOException
     {
         ByteArrayInputStream in = new ByteArrayInputStream(data);
         ImageInputStream stream = ImageIO.createImageInputStream(in);
-        Iterator iter = ImageIO.getImageReaders(stream);
-        ImageReader reader = (ImageReader) iter.next();
+        Iterator<ImageReader> iter = ImageIO.getImageReaders(stream);
+        ImageReader reader = iter.next();
         if (reader == null)
             throw new UnsupportedOperationException(
                     "This image is unsupported.");
@@ -133,7 +134,7 @@ public class JPEGDecoder implements Codec
 
                 byte[] b = (byte[]) input.getData();
                 Dimension d = inputFormat.getSize();
-                BufferedImage dest = (BufferedImage) imageTable.get(d);
+                BufferedImage dest = imageTable.get(d);
                 if (dest == null)
                 {
                     dest = new BufferedImage(d.width, d.height,

@@ -2,7 +2,7 @@ package net.sf.fmj.utility;
 
 /**
  * RingBuffer
- * 
+ *
  * @author mgodehardt
  * @version 1-1-alpha3
  */
@@ -12,12 +12,6 @@ public class RingBuffer
     private int readIndex;
     private int writeIndex;
     private int overrunCounter;
-
-    // default ctor
-    private RingBuffer()
-    {
-        // disallow
-    }
 
     // ctor for the jitter buffer
     public RingBuffer(int maxItems)

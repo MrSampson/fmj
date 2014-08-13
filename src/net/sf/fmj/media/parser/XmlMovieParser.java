@@ -18,9 +18,9 @@ import com.lti.utils.synchronization.*;
 
 /**
  * Parser for FMJ's XML movie format.
- * 
+ *
  * @author Ken Larson
- * 
+ *
  */
 public class XmlMovieParser extends AbstractDemultiplexer
 {
@@ -44,11 +44,6 @@ public class XmlMovieParser extends AbstractDemultiplexer
 
             this.track = track;
             this.format = format;
-        }
-
-        public boolean canSkipNanos()
-        {
-            return false;
         }
 
         @Override
@@ -100,18 +95,6 @@ public class XmlMovieParser extends AbstractDemultiplexer
             buffer.copy(b);
 
         }
-
-        /**
-         * 
-         * @return nanos skipped, 0 if unable to skip.
-         * @throws IOException
-         */
-        public long skipNanos(long nanos) throws IOException
-        {
-            return 0; // TODO
-
-        }
-
     }
 
     private static final Logger logger = LoggerSingleton.logger;
@@ -247,7 +230,7 @@ public class XmlMovieParser extends AbstractDemultiplexer
     public void setSource(DataSource source) throws IOException,
             IncompatibleSourceException
     {
-        final String protocol = source.getLocator().getProtocol();
+        source.getLocator().getProtocol();
 
         if (!(source instanceof PullDataSource))
             throw new IncompatibleSourceException();
@@ -266,9 +249,9 @@ public class XmlMovieParser extends AbstractDemultiplexer
 
 /**
  * SAX callback for FMJ's XML movie format.
- * 
+ *
  * @author Ken Larson
- * 
+ *
  */
 class XmlMovieSAXHandler extends DefaultHandler
 {
@@ -574,9 +557,9 @@ class XmlMovieSAXHandler extends DefaultHandler
 /**
  * Thread to parse FMJ's XML movie format, results handled by
  * XmlMovieSAXHandler. XmlMovieSAXHandler can be used to read parsed results.
- * 
+ *
  * @author Ken Larson
- * 
+ *
  */
 class XmlMovieSAXParserThread extends CloseableThread
 {

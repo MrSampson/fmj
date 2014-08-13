@@ -1,5 +1,7 @@
 package net.sf.fmj.media;
 
+import java.util.*;
+
 import javax.media.*;
 
 /**
@@ -10,7 +12,7 @@ abstract public class BasicModule implements Module, StateTransistor
     /**
      * Connectors Registry.
      */
-    class Registry extends java.util.Hashtable
+    class Registry extends Hashtable<String,Connector>
     {
         Connector def = null; // the Default connector.
 
@@ -27,30 +29,31 @@ abstract public class BasicModule implements Module, StateTransistor
         /** returns all Connectors in this Registry */
         Connector[] getConnectors()
         {
-            java.util.Enumeration connectorsEnum = elements();
+            Enumeration<Connector> connectorsEnum = elements();
             Connector[] connectorsArray = new Connector[size()];
             for (int i = 0; i < size(); i++)
-                connectorsArray[i] = (Connector) connectorsEnum.nextElement();
+                connectorsArray[i] = connectorsEnum.nextElement();
             return connectorsArray;
         }
 
         /** returns the names of all Connectors in this Registry */
         String[] getNames()
         {
-            java.util.Enumeration namesEnum = keys();
+            Enumeration<String> namesEnum = keys();
             String[] namesArray = new String[size()];
             for (int i = 0; i < size(); i++)
-                namesArray[i] = (String) namesEnum.nextElement();
+                namesArray[i] = namesEnum.nextElement();
             return namesArray;
         }
 
         /**
          * register Connector.
-         * 
+         *
          * @exception RuntimeException
          *                If the specified name is already registered
          */
-        void put(String name, Connector connector)
+        @Override
+        public Connector put(String name, Connector connector)
         {
             if (containsKey(name))
                 throw new RuntimeException("Connector '" + name
@@ -59,7 +62,7 @@ abstract public class BasicModule implements Module, StateTransistor
                         + "'");
             if (def == null)
                 def = connector;
-            super.put(name, connector);
+            return super.put(name, connector);
         }
 
     }
@@ -161,7 +164,7 @@ abstract public class BasicModule implements Module, StateTransistor
 
     /**
      * This function performs the steps to prefetch a module or Player.
-     * 
+     *
      * @return true if successful.
      */
     public boolean doPrefetch()
@@ -173,7 +176,7 @@ abstract public class BasicModule implements Module, StateTransistor
 
     /**
      * This function performs the steps of realizing a module or a Player.
-     * 
+     *
      * @return true if successful.
      */
     public boolean doRealize()
@@ -343,7 +346,7 @@ abstract public class BasicModule implements Module, StateTransistor
 
     /**
      * function which does the real processing.
-     * 
+     *
      * <pre>
      * if canRun {
      *    for (all inputConnectors)
@@ -385,14 +388,14 @@ abstract public class BasicModule implements Module, StateTransistor
 
     /**
      * reset this module only.
-     * 
+     *
      * <pre>
      * if (state== Started)
      *    throw Exception()
      * for (all connectors)
      *    connector.reset()
      * </pre>
-     * 
+     *
      * The resetted flag is falsified only when the module is later restarted.
      */
     public void reset()
@@ -421,7 +424,7 @@ abstract public class BasicModule implements Module, StateTransistor
     /**
      * Specify a <tt>ModuleListener</tt> to which this <tt>Module</tt> will send
      * events.
-     * 
+     *
      * @param listener
      *            The listener to which the <tt>Module</tt> will post events.
      */

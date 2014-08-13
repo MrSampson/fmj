@@ -7,11 +7,12 @@ import javax.media.format.*;
 import javax.media.rtp.*;
 import javax.media.rtp.event.*;
 
+import net.sf.fmj.media.*;
 import net.sf.fmj.media.rtp.util.*;
 
 public class SSRCCache
 {
-    SSRCTable cache;
+    SSRCTable<SSRCInfo> cache;
     RTPSourceInfoCache sourceInfoCache;
     OverallStats stats;
     OverallTransStats transstats;
@@ -34,11 +35,11 @@ public class SSRCCache
     int avgrtcpsize;
     Hashtable conflicttable;
     SSRCInfo ourssrc;
-    public RTPSessionMgr sm;
+    public final RTPSessionMgr sm;
 
     SSRCCache(RTPSessionMgr sm)
     {
-        cache = new SSRCTable();
+        cache = new SSRCTable<SSRCInfo>();
         stats = null;
         transstats = null;
         clockrate = new int[128];
@@ -52,7 +53,6 @@ public class SSRCCache
         rtcpsent = false;
         avgrtcpsize = 128;
         conflicttable = new Hashtable(5);
-        ourssrc = null;
         stats = sm.defaultstats;
         transstats = sm.transstats;
         sourceInfoCache = new RTPSourceInfoCache();
@@ -65,7 +65,7 @@ public class SSRCCache
 
     SSRCCache(RTPSessionMgr sm, RTPSourceInfoCache sic)
     {
-        cache = new SSRCTable();
+        cache = new SSRCTable<SSRCInfo>();
         stats = null;
         transstats = null;
         clockrate = new int[128];
@@ -79,7 +79,6 @@ public class SSRCCache
         rtcpsent = false;
         avgrtcpsize = 128;
         conflicttable = new Hashtable(5);
-        ourssrc = null;
         stats = sm.defaultstats;
         transstats = sm.transstats;
         sourceInfoCache = sic;
@@ -91,13 +90,12 @@ public class SSRCCache
     int aliveCount()
     {
         int tot = 0;
-        for (Enumeration e = cache.elements(); e.hasMoreElements();)
+        for (Enumeration<SSRCInfo> e = cache.elements(); e.hasMoreElements();)
         {
-            SSRCInfo s = (SSRCInfo) e.nextElement();
+            SSRCInfo s = e.nextElement();
             if (s.alive)
                 tot++;
         }
-
         return tot;
     }
 
@@ -206,7 +204,7 @@ public class SSRCCache
                             info.port = port;
                         } else
                         {
-                            stats.update(4, 1);
+                            stats.update(OverallStats.REMOTECOLL, 1);
                             transstats.remote_coll++;
                             RemoteCollisionEvent evt = new RemoteCollisionEvent(
                                     sm, info.ssrc);
@@ -233,10 +231,12 @@ public class SSRCCache
                     SSRCInfo ssrcinfo2 = null;
                     return ssrcinfo2;
                 }
-                System.out.println("changing to Passive");
-                System.out.println("existing one " + info);
+                //System.out.println("changing to Passive");
+                //System.out.println("existing one " + info);
                 SSRCInfo newinfo = new PassiveSSRCInfo(info);
-                System.out.println("new one is " + newinfo);
+                Log.info("Changing to PassiveSSRCInfo for SSRC="
+                                 + (0xffffffffL & newinfo.getSSRC()));
+
                 info = newinfo;
                 cache.put(ssrc, info);
             }
@@ -250,7 +250,7 @@ public class SSRCCache
                         return ssrcinfo3;
                     }
                     info = new SendSSRCInfo(this, ssrc);
-                    info.initsource((int) TrueRandom.rand());
+                    info.initsource(TrueRandom.nextInt());
                 }
                 if (mode == 1)
                     info = new RecvSSRCInfo(this, ssrc);
@@ -284,7 +284,7 @@ public class SSRCCache
         return info;
     }
 
-    SSRCTable getMainCache()
+    SSRCTable<SSRCInfo> getMainCache()
     {
         return cache;
     }
@@ -304,27 +304,29 @@ public class SSRCCache
 
     private void LocalCollision(int ssrc)
     {
-        int newssrc = 0;
+        int newSSRC = 0;
         do
-            newssrc = (int) TrueRandom.rand();
-        while (lookup(newssrc) != null);
+        {
+            newSSRC = (int) sm.generateSSRC(GenerateSSRCCause.LOCAL_COLLISION);
+        }
+        while (lookup(newSSRC) != null);
         SSRCInfo newinfo = new PassiveSSRCInfo(ourssrc);
-        newinfo.ssrc = newssrc;
-        cache.put(newssrc, newinfo);
+        newinfo.ssrc = newSSRC;
+        cache.put(newSSRC, newinfo);
         changessrc(newinfo);
         ourssrc = newinfo;
-        stats.update(3, 1);
+        stats.update(OverallStats.LOCALCOLL, 1);
         transstats.local_coll++;
     }
 
     SSRCInfo lookup(int ssrc)
     {
-        return (SSRCInfo) cache.get(ssrc);
+        return cache.get(ssrc);
     }
 
     void remove(int ssrc)
     {
-        SSRCInfo info = (SSRCInfo) cache.remove(ssrc);
+        SSRCInfo info = cache.remove(ssrc);
         if (info != null)
             info.delete();
     }

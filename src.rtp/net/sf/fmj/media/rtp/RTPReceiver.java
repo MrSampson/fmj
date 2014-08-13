@@ -26,17 +26,15 @@ public class RTPReceiver extends PacketFilter
 
     private boolean rtcpstarted;
 
-    private boolean setpriority;
-
     /*
      * TODO Boris Grozev: The field mismatchprinted always equals false and may
      * be removed.
-     */ 
+     */
     private boolean mismatchprinted = false;
 
     private final String content;
 
-    final SSRCTable probationList;
+    final SSRCTable<RTPPacket> probationList;
 
     static final int MAX_DROPOUT = 3000;
 
@@ -54,9 +52,8 @@ public class RTPReceiver extends PacketFilter
     {
         lastseqnum = -1;
         rtcpstarted = false;
-        setpriority = false;
         content = "";
-        probationList = new SSRCTable();
+        probationList = new SSRCTable<RTPPacket>();
         controlstr = "javax.media.rtp.RTPControl";
         errorPayload = -1;
         cache = ssrccache;
@@ -177,12 +174,18 @@ public class RTPReceiver extends PacketFilter
             ssrcinfo.payloadType = rtppacket.payloadType;
         }
         int diff = rtppacket.seqnum - ssrcinfo.maxseq;
-        if (ssrcinfo.maxseq + 1 != rtppacket.seqnum && diff > 0)
-            ssrcinfo.stats.update(RTPStats.PDULOST, diff - 1);
-        //Packets arriving out of order have already been counted as lost (by
-        //the clause above), so decrease the lost count.
-        if (diff > -MAX_MISORDER && diff < 0)
-            ssrcinfo.stats.update(RTPStats.PDULOST, -1);
+        if (diff > 0)
+        {
+            if (ssrcinfo.maxseq + 1 != rtppacket.seqnum)
+                ssrcinfo.stats.update(RTPStats.PDULOST, diff - 1);
+        }
+        else if (diff < 0)
+        {
+            // Packets arriving out of order have already been counted as lost
+            // (by the clause above), so decrease the lost count.
+            if (diff > -MAX_MISORDER)
+                ssrcinfo.stats.update(RTPStats.PDULOST, -1);
+        }
         if (ssrcinfo.wrapped)
             ssrcinfo.wrapped = false;
         boolean flag = false;
@@ -287,8 +290,9 @@ public class RTPReceiver extends PacketFilter
                     rtpcontrolimpl.payload = -1;
                 }
             }
-            ssrcinfo.lastPayloadType = rtppacket.payloadType;
+
             if (ssrcinfo.dsource != null)
+            {
                 try
                 {
                     Log.warning("Stopping stream because of payload type "
@@ -296,11 +300,14 @@ public class RTPReceiver extends PacketFilter
                             + ssrcinfo.lastPayloadType + ", got pt="
                             + rtppacket.payloadType);
                     ssrcinfo.dsource.stop();
-                } catch (IOException ioexception)
+                }
+                catch (IOException ioexception)
                 {
                     System.err.println("Stopping DataSource after PCE "
                             + ioexception.getMessage());
                 }
+            }
+            ssrcinfo.lastPayloadType = rtppacket.payloadType;
             RemotePayloadChangeEvent remotepayloadchangeevent = new RemotePayloadChangeEvent(
                     cache.sm, (ReceiveStream) ssrcinfo,
                     ssrcinfo.lastPayloadType, rtppacket.payloadType);
@@ -347,8 +354,7 @@ public class RTPReceiver extends PacketFilter
         }
         if (!ssrcinfo.streamconnect)
         {
-            DataSource datasource = (DataSource) cache.sm.dslist
-                    .get(ssrcinfo.ssrc);
+            DataSource datasource = cache.sm.dslist.get(ssrcinfo.ssrc);
             if (datasource == null)
             {
                 DataSource datasource1 = cache.sm.getDataSource(null);
@@ -429,8 +435,7 @@ public class RTPReceiver extends PacketFilter
                 mismatchprinted = false;
             if (flag)
             {
-                RTPPacket rtppacket1 = (RTPPacket) probationList
-                        .remove(ssrcinfo.ssrc);
+                RTPPacket rtppacket1 = probationList.remove(ssrcinfo.ssrc);
                 if (rtppacket1 != null)
                     rtpdemultiplexer.demuxpayload(new SourceRTPPacket(
                             rtppacket1, ssrcinfo));

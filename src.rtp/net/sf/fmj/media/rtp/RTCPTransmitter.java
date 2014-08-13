@@ -55,7 +55,6 @@ public class RTCPTransmitter
         RTCPBYEPacket byep = new RTCPBYEPacket(ssrclist, reason);
         packets[packets.length - 1] = byep;
         RTCPCompoundPacket cp = new RTCPCompoundPacket(packets);
-        RTCPTransmitter _tmp = this;
         double delay;
         if (cache.aliveCount() > 50)
         {
@@ -97,11 +96,11 @@ public class RTCPTransmitter
 
     protected RTCPReportBlock[] makerecreports(long time)
     {
-        Vector reports = new Vector();
-        for (Enumeration elements = cache.cache.elements();
+        Vector<RTCPReportBlock> reports = new Vector<RTCPReportBlock>();
+        for (Enumeration<SSRCInfo> elements = cache.cache.elements();
                 elements.hasMoreElements();)
         {
-            SSRCInfo info = (SSRCInfo) elements.nextElement();
+            SSRCInfo info = elements.nextElement();
             if (!info.ours && info.sender)
             {
                 RTCPReportBlock rep = new RTCPReportBlock();
@@ -133,9 +132,7 @@ public class RTCPTransmitter
     {
         Vector packets = new Vector();
         SSRCInfo ourinfo = ssrcInfo;
-        boolean senderreport = false;
-        if (ourinfo.sender)
-            senderreport = true;
+        boolean senderreport = ourinfo.sender;
         long time = System.currentTimeMillis();
         RTCPReportBlock reports[] = makerecreports(time);
         RTCPReportBlock firstrep[] = reports;
@@ -177,7 +174,7 @@ public class RTCPTransmitter
         RTCPSDESPacket sp = new RTCPSDESPacket(new RTCPSDES[1]);
         sp.sdes[0] = new RTCPSDES();
         sp.sdes[0].ssrc = ssrcInfo.ssrc;
-        Vector itemvec = new Vector();
+        Vector<RTCPSDESItem> itemvec = new Vector<RTCPSDESItem>();
         itemvec.addElement(new RTCPSDESItem(1, ourinfo.sourceInfo.getCNAME()));
         if (sdescounter % 3 == 0)
         {
@@ -243,7 +240,7 @@ public class RTCPTransmitter
                 cache.rtcpsent = true;
         } catch (IOException e)
         {
-            stats.update(6, 1);
+            stats.update(OverallStats.TRANSMITFAILED, 1);
             cache.sm.transstats.transmit_failed++;
         }
     }

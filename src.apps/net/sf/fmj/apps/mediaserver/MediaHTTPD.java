@@ -15,9 +15,9 @@ import fi.iki.elonen.nanohttpd.*;
 
 /**
  * HTTP daemon which serves up transcoded media.
- * 
+ *
  * @author Ken Larson
- * 
+ *
  */
 public class MediaHTTPD extends NanoHTTPD
 {
@@ -121,7 +121,7 @@ public class MediaHTTPD extends NanoHTTPD
 
         logger.fine(method + " '" + uri + "' ");
 
-        Enumeration e = header.propertyNames();
+        Enumeration<?> e = header.propertyNames();
         while (e.hasMoreElements())
         {
             String value = (String) e.nextElement();

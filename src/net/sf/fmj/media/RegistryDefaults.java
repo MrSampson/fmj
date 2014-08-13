@@ -20,9 +20,9 @@ import com.lti.utils.*;
  * with fmj but might be in the classpath (like fobs4jmf). The flags give us the
  * flexibility to make the registry the same as JMF's or JMF's + FMJ's, or just
  * FMJ's. Making it the same as JMF's is useful for unit testing.
- * 
+ *
  * @author Ken Larson
- * 
+ *
  */
 public class RegistryDefaults
 {
@@ -685,9 +685,13 @@ public class RegistryDefaults
             result.add("net.sf.fmj.media.codec.video.lossless.PNGEncoder");
             result.add("net.sf.fmj.media.codec.video.lossless.PNGDecoder");
 
-            result.add("net.sf.fmj.media.parser.RawPushBufferParser");
-            // result.add("net.sf.fmj.media.parser.RawPullStreamParser"); //
-            // TODO: test and add. Does it conflict with RawPushBufferParser?
+            result.add("net.sf.fmj.media.parser.RawStreamParser");
+            // XXX The class net.sf.fmj.media.parser.RawPushBufferParser has
+            // already been added above.
+            // result.add("net.sf.fmj.media.parser.RawPushBufferParser");
+            result.add("net.sf.fmj.media.parser.RawPullStreamParser");
+            result.add("net.sf.fmj.media.parser.RawPullBufferParser");
+
             result.add("net.sf.fmj.media.multiplexer.RTPSyncBufferMux");
             result.add("net.sf.fmj.media.multiplexer.RawBufferMux");
             result.add("net.sf.fmj.media.multiplexer.audio.AIFFMux");
@@ -701,14 +705,10 @@ public class RegistryDefaults
             // result.add("net.sf.fmj.media.codec.video.ImageScaler");
 
             if (!DISABLE_OGG)
-            {
                 result.add("net.sf.fmj.theora_java.JavaOggParser");
-            }
 
             // if (OSUtils.isMacOSX() || OSUtils.isWindows())
-            // {
-            // result.add("net.sf.fmj.qt.QTParser");
-            // }
+            //     result.add("net.sf.fmj.qt.QTParser");
 
             result.add("net.sf.fmj.media.parser.MultipartMixedReplaceParser");
             result.add("net.sf.fmj.media.multiplexer.MultipartMixedReplaceMux");

@@ -8,21 +8,20 @@ import javax.media.format.*;
 import net.sf.fmj.media.*;
 
 /**
- * 
+ *
  * This is the Graph builder to generate the data flow graph for rendering an
  * input format.
- * 
+ *
  * It contains 3 parts: 1) Routines to search for all the supported output
- * formats; 2) Routines to build a default flow graph -- buildGraph;
- * 
+ * formats; 2) Routines to build a default flow graph -- <tt>buildGraph</tt>;
+ *
  * A default graph is such that no customised option is specified on the
- * TrackControl.
- * 
+ * <tt>TrackControl</tt>.
+ *
  * It operates on a breath-first search algorithm until the final target is
- * reached as defined by the findTarget() method. Intermediate search paths are
- * stored as GraphNode's in the "candidates" vector.
+ * reached as defined by the <tt>findTarget()</tt> method. Intermediate search
+ * paths are stored as <tt>GraphNode</tt>s in the "candidates" vector.
  */
-
 public class SimpleGraphBuilder
 {
     static public PlugIn createPlugIn(String name, int type)
@@ -192,15 +191,13 @@ public class SimpleGraphBuilder
      * to see if it supports the given input and output formats.
      */
     static public GraphNode getPlugInNode(String name, int type,
-            Hashtable plugIns)
+            Map<String, GraphNode> plugIns)
     {
         GraphNode gn = null;
-        Object obj = null;
-        boolean add = false;
 
         // Check the hash registry to see if we've already instantiated that
         // object. If not, we'll instantiate it.
-        if (plugIns == null || (gn = (GraphNode) plugIns.get(name)) == null)
+        if (plugIns == null || (gn = plugIns.get(name)) == null)
         {
             PlugIn p = createPlugIn(name, type);
 
@@ -235,7 +232,7 @@ public class SimpleGraphBuilder
      * output (for the upstream) or as input (for the downstream). Either of the
      * plugin arguments can be null. In which case the verification step will be
      * skipped accordingly.
-     * 
+     *
      * @param outs the supported output formats from the upstream node.
      * @param ins the supported input formats from the downstream node.
      * @param up the upstream node.
@@ -262,7 +259,7 @@ public class SimpleGraphBuilder
      * output (for the upstream) or as input (for the downstream). Either of the
      * plugin arguments can be null. In which case the verification step will be
      * skipped accordingly.
-     * 
+     *
      * @return a matching format.
      */
     static public Format matches(Format out, Format ins[], PlugIn up,
@@ -364,7 +361,8 @@ public class SimpleGraphBuilder
     // damencho from 4 to 5
     protected int STAGES = 5;
 
-    protected Hashtable plugIns = new Hashtable(40);
+    protected Hashtable<String,GraphNode> plugIns
+        = new Hashtable<String,GraphNode>(40);
 
     protected GraphNode targetPlugins[] = null;
 
@@ -518,22 +516,20 @@ public class SimpleGraphBuilder
 
         Log.setIndent(node.level + 1);
 
-        // Log.write("level: " + node.level);
+//        Log.write("level: " + node.level);
         if (node.plugin != null)
         {
-            // It may not seem necessary to do this since the
-            // previous round has already verified the input.
-            // But since the same plugin could have a different
-            // input called on it on previous rounds, it needs to
-            // be reset to the designated input. This has
-            // caused a bug in failing setOutputFormat for some
-            // codecs.
+            // It may not seem necessary to do this since the previous round has
+            // already verified the input. But since the same plugin could have
+            // a different input called on it on previous rounds, it needs to be
+            // reset to the designated input. This has caused a bug in failing
+            // setOutputFormat for some codecs.
             if (verifyInput(node.plugin, node.input) == null)
                 return null;
-            // Log.write("Try plugin: " + node.plugin.getClass());
+//            Log.write("Try plugin: " + node.plugin.getClass());
         } else
         {
-            // Log.write("Given input: " + node.input);
+//            Log.write("Given input: " + node.input);
         }
 
         // Stop when the target is reached as defined by the findTarget
@@ -542,10 +538,9 @@ public class SimpleGraphBuilder
         if ((n = findTarget(node)) != null)
         {
             // We are done!
-            /*
-             * if (n.plugin != null) Log.write("Found target: " + n.plugin);
-             * else Log.write("Found target: " + n.cname);
-             */
+//            Log.write(
+//                    "Found target: "
+//                        + ((n.plugin != null) ? n.plugin : n.cname));
             indent = oldIndent;
             Log.setIndent(indent);
             return n;
@@ -573,7 +568,7 @@ public class SimpleGraphBuilder
                 outs = node.getSupportedOutputs(node.input);
                 if (outs == null || outs.length == 0)
                 {
-                    // Log.write("Weird!  The given plugin does not support any output.");
+//                    Log.write("Weird!  The given plugin does not support any output.");
                     indent = oldIndent;
                     Log.setIndent(indent);
                     return null;
@@ -582,9 +577,8 @@ public class SimpleGraphBuilder
             input = node.input;
 
             // 2.1.1b hack -ivg
-            // if (node.plugin instanceof
-            // com.sun.media.codec.audio.mpa.Packetizer)
-            // mp3Pkt = true;
+//            if (node.plugin instanceof com.sun.media.codec.audio.mpa.Packetizer)
+//                mp3Pkt = true;
 
         } else
         {
@@ -607,8 +601,8 @@ public class SimpleGraphBuilder
             {
                 if (verifyOutput(node.plugin, outs[i]) == null)
                 {
-                    // Log.write("Verify output failed: " + node.plugin);
-                    // Log.write("  with: " + outs[i]);
+//                    Log.write("Verify output failed: " + node.plugin);
+//                    Log.write("  with: " + outs[i]);
                     if (inspector != null && inspector.detailMode())
                         inspector.verifyOutputFailed(node.plugin, outs[i]);
                     continue;
@@ -620,7 +614,7 @@ public class SimpleGraphBuilder
                     continue;
             }
 
-            // Log.write("find codec for input: " + outs[i]);
+//            Log.write("find codec for input: " + outs[i]);
 
             Vector cnames = PlugInManager.getPlugInList(outs[i], null,
                     PlugInManager.CODEC);
@@ -645,13 +639,13 @@ public class SimpleGraphBuilder
                 if (gn.checkAttempted(outs[i]))
                     continue;
 
-                // Log.write("Try codec: " + cnames.elementAt(j));
+//                Log.write("Try codec: " + cnames.elementAt(j));
 
                 ins = gn.getSupportedInputs();
                 if ((fmt = matches(outs[i], ins, null, gn.plugin)) == null)
                 {
-                    // Log.write("Verify input failed: " + outs[i]);
-                    // Log.write("    : " + gn.plugin);
+//                    Log.write("Verify input failed: " + outs[i]);
+//                    Log.write("    : " + gn.plugin);
                     if (inspector != null && inspector.detailMode())
                         inspector.verifyInputFailed(gn.plugin, outs[i]);
                     continue;
@@ -669,11 +663,13 @@ public class SimpleGraphBuilder
             }
         }
 
-        /*
-         * if (!foundSomething) { if (node.plugin == null)
-         * Log.write("  no codec supports the given input."); else
-         * Log.write("  no codec supports the outputs from this plugin."); }
-         */
+//        if (!foundSomething)
+//        {
+//            if (node.plugin == null)
+//                Log.write("  no codec supports the given input.");
+//            else
+//                Log.write("  no codec supports the outputs from this plugin.");
+//        }
 
         indent = oldIndent;
         Log.setIndent(indent);
@@ -749,30 +745,19 @@ public class SimpleGraphBuilder
 
         candidates.addElement(hsyn);
 
-        // clear up the hashtable plugIns too, only let it keep
-        // all the failed nodes, so that we are not going to
-        // attemp these nodes again.
+        // clear up the hashtable plugIns too, only let it keep all the failed
+        // nodes, so that we are not going to attempt these nodes again.
         failed.failed = true;
         plugIns.put(failed.plugin.getClass().getName(), failed);
 
-        Enumeration e = plugIns.keys();
+        Enumeration<String> e = plugIns.keys();
         while (e.hasMoreElements())
         {
-            String ss = (String) e.nextElement();
-            GraphNode nn = (GraphNode) plugIns.get(ss);
+            String ss = e.nextElement();
+            GraphNode nn = plugIns.get(ss);
             if (!nn.failed)
                 plugIns.remove(ss);
         }
-
-        /****
-         * This is the old implementation. GraphNode n; Enumeration enum =
-         * candidates.elements(); while (enum.hasMoreElements()) { n =
-         * (GraphNode)enum.nextElement(); if (n.plugin == failed.plugin)
-         * candidates.removeElement(n); }
-         * 
-         * if ((n = (GraphNode)plugIns.get(failed.plugin.getClass().getName()))
-         * != null) n.failed = true;
-         ******/
     }
 
     /**
@@ -781,11 +766,11 @@ public class SimpleGraphBuilder
     public void reset()
     {
         // damencho change enum keyword to compile with 1.5
-        Enumeration enum1 = plugIns.elements();
+        Enumeration<GraphNode> enum1 = plugIns.elements();
         GraphNode n;
         while (enum1.hasMoreElements())
         {
-            n = (GraphNode) enum1.nextElement();
+            n = enum1.nextElement();
             n.resetAttempted();
         }
     }
@@ -974,5 +959,4 @@ public class SimpleGraphBuilder
 
         return null;
     }
-
 }

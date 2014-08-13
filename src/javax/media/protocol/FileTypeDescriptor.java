@@ -6,9 +6,9 @@ import java.util.*;
  * Standard JMF class -- see <a href=
  * "http://java.sun.com/products/java-media/jmf/2.1.1/apidocs/javax/media/protocol/FileTypeDescriptor.html"
  * target="_blank">this class in the JMF Javadoc</a>. Complete.
- * 
+ *
  * @author Ken Larson
- * 
+ *
  */
 public class FileTypeDescriptor extends ContentDescriptor
 {
@@ -32,7 +32,7 @@ public class FileTypeDescriptor extends ContentDescriptor
     @Override
     public String toString()
     {
-        final Map strings = new HashMap();
+        final Map<String,String> strings = new HashMap<String,String>();
         {
             // TODO: externalize.
             strings.put(QUICKTIME, "QuickTime");
@@ -48,7 +48,7 @@ public class FileTypeDescriptor extends ContentDescriptor
             strings.put(MPEG_AUDIO, "MPEG Audio");
         }
 
-        final String result = (String) strings.get(getContentType());
+        final String result = strings.get(getContentType());
         if (result == null)
             return super.toString();
         return result;
