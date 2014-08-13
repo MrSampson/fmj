@@ -4,10 +4,10 @@ import java.io.*;
 
 public class RTCPRRPacket extends RTCPPacket
 {
-    int ssrc;
-    RTCPReportBlock reports[];
+    public int ssrc;
+    public RTCPReportBlock reports[];
 
-    RTCPRRPacket(int ssrc, RTCPReportBlock reports[])
+    public RTCPRRPacket(int ssrc, RTCPReportBlock reports[])
     {
         if (reports.length > 31)
             throw new IllegalArgumentException("Too many reports");
@@ -23,7 +23,7 @@ public class RTCPRRPacket extends RTCPPacket
     }
 
     @Override
-    protected void assemble(DataOutputStream out) throws IOException
+    public void assemble(DataOutputStream out) throws IOException
     {
         out.writeByte(128 + reports.length);
         out.writeByte(RR);

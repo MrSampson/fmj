@@ -4,15 +4,15 @@ import java.io.*;
 
 public class RTCPSRPacket extends RTCPPacket
 {
-    int ssrc;
-    long ntptimestampmsw;
-    long ntptimestamplsw;
-    long rtptimestamp;
-    long packetcount;
-    long octetcount;
-    RTCPReportBlock reports[];
+    public int ssrc;
+    public long ntptimestampmsw;
+    public long ntptimestamplsw;
+    public long rtptimestamp;
+    public long packetcount;
+    public long octetcount;
+    public RTCPReportBlock reports[];
 
-    RTCPSRPacket(int ssrc, RTCPReportBlock reports[])
+    public RTCPSRPacket(int ssrc, RTCPReportBlock reports[])
     {
         if (reports.length > 31)
             throw new IllegalArgumentException("Too many reports");
@@ -28,7 +28,7 @@ public class RTCPSRPacket extends RTCPPacket
     }
 
     @Override
-    protected void assemble(DataOutputStream out) throws IOException
+    public void assemble(DataOutputStream out) throws IOException
     {
         out.writeByte(128 + reports.length);
         out.writeByte(SR);
