@@ -207,11 +207,11 @@ public class RTPReceiver extends PacketFilter
 
     private void fireNewReceiveStreamEventIfRequired(SSRCInfo ssrcinfo)
     {
-        if (!ssrcinfo.newrecvstream)
+        if (ssrcinfo.newrecvstream)
         {
             NewReceiveStreamEvent newreceivestreamevent = new NewReceiveStreamEvent(
                     cache.sm, (ReceiveStream) ssrcinfo);
-            ssrcinfo.newrecvstream = true;
+            ssrcinfo.newrecvstream = false;
             Log.info("Posting NewReceivedStreamEvent for stream " + ssrcinfo.hashCode());
             cache.eventhandler.postEvent(newreceivestreamevent);
         }

@@ -161,6 +161,7 @@ public class SSRCCache
 
     synchronized void destroy()
     {
+
         cache.removeAll();
         if (eventhandler != null)
             eventhandler.close();
@@ -211,7 +212,7 @@ public class SSRCCache
                     }
                 }
             }
-            
+
             if (info != null && mode == 1 && !(info instanceof RecvSSRCInfo))
             {
                 if (info.ours)
@@ -219,7 +220,12 @@ public class SSRCCache
                     SSRCInfo ssrcinfo1 = null;
                     return ssrcinfo1;
                 }
+                System.out.println("changing to Recv and setting newrecvstream to true");
+                System.out.println("existing one " + info + " " + info.ssrc);
                 SSRCInfo newinfo = new RecvSSRCInfo(info);
+                System.out.println("new one is " + newinfo + " " + newinfo.ssrc);
+
+                newinfo.newrecvstream = true;
                 info = newinfo;
                 cache.put(ssrc, info);
             }
@@ -230,13 +236,15 @@ public class SSRCCache
                     SSRCInfo ssrcinfo2 = null;
                     return ssrcinfo2;
                 }
+
                 System.out.println("changing to Passive");
-                System.out.println("existing one " + info);
+                System.out.println("existing one " + info + " " + info.ssrc);
                 SSRCInfo newinfo = new PassiveSSRCInfo(info);
-                System.out.println("new one is " + newinfo);
+                System.out.println("new one is " + newinfo + " " + newinfo.ssrc);
+
                 info = newinfo;
                 cache.put(ssrc, info);
-            }
+             }
             if (info == null)
             {
                 if (mode == 3)
