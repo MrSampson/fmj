@@ -7,6 +7,7 @@ import javax.media.format.*;
 import javax.media.rtp.*;
 import javax.media.rtp.event.*;
 
+import net.sf.fmj.media.*;
 import net.sf.fmj.media.rtp.util.*;
 
 public class SSRCCache
@@ -220,11 +221,15 @@ public class SSRCCache
                     SSRCInfo ssrcinfo1 = null;
                     return ssrcinfo1;
                 }
-                System.out.println("changing to Recv and setting newrecvstream to true");
-                System.out.println("existing one " + info + " " + info.ssrc);
-                SSRCInfo newinfo = new RecvSSRCInfo(info);
-                System.out.println("new one is " + newinfo + " " + newinfo.ssrc);
 
+                SSRCInfo newinfo = new RecvSSRCInfo(info);
+
+                Log.info("changing to Recv and setting newrecvstream to true " +
+                         "\nExisting one " + info + " " + info.ssrc +
+                         "\nNew one " + newinfo + " " + newinfo.ssrc);
+
+                // Mark this as a new receive stream to ensure we fire the
+                // correct events for starting the playback engine
                 newinfo.newrecvstream = true;
                 info = newinfo;
                 cache.put(ssrc, info);
@@ -237,10 +242,11 @@ public class SSRCCache
                     return ssrcinfo2;
                 }
 
-                System.out.println("changing to Passive");
-                System.out.println("existing one " + info + " " + info.ssrc);
                 SSRCInfo newinfo = new PassiveSSRCInfo(info);
-                System.out.println("new one is " + newinfo + " " + newinfo.ssrc);
+
+                Log.info("changing to Passive " +
+                        "\nExisting one " + info + " " + info.ssrc +
+                        "\nNew one " + newinfo + " " + newinfo.ssrc);
 
                 info = newinfo;
                 cache.put(ssrc, info);
