@@ -9,7 +9,9 @@ import javax.media.rtp.ReceiveStream;
 import javax.media.rtp.event.LocalCollisionEvent;
 import javax.media.rtp.event.RemoteCollisionEvent;
 
-import net.sf.fmj.media.rtp.util.SSRCTable;
+
+import net.sf.fmj.media.*;
+import net.sf.fmj.media.rtp.util.*;
 
 public class SSRCCache
 {
@@ -165,6 +167,7 @@ public class SSRCCache
 
     synchronized void destroy()
     {
+
         cache.removeAll();
         if (eventhandler != null)
             eventhandler.close();
@@ -223,7 +226,16 @@ public class SSRCCache
                     SSRCInfo ssrcinfo1 = null;
                     return ssrcinfo1;
                 }
+
                 SSRCInfo newinfo = new RecvSSRCInfo(info);
+
+                Log.info("changing to Recv and setting newrecvstream to true " +
+                         "\nExisting one " + info + " " + info.ssrc +
+                         "\nNew one " + newinfo + " " + newinfo.ssrc);
+
+                // Mark this as a new receive stream to ensure we fire the
+                // correct events for starting the playback engine
+                newinfo.newrecvstream = true;
                 info = newinfo;
                 cache.put(ssrc, info);
             }
@@ -234,13 +246,16 @@ public class SSRCCache
                     SSRCInfo ssrcinfo2 = null;
                     return ssrcinfo2;
                 }
-                System.out.println("changing to Passive");
-                System.out.println("existing one " + info);
+
                 SSRCInfo newinfo = new PassiveSSRCInfo(info);
-                System.out.println("new one is " + newinfo);
+
+                Log.info("changing to Passive " +
+                        "\nExisting one " + info + " " + info.ssrc +
+                        "\nNew one " + newinfo + " " + newinfo.ssrc);
+
                 info = newinfo;
                 cache.put(ssrc, info);
-            }
+             }
             if (info == null)
             {
                 if (mode == 3)

@@ -105,7 +105,7 @@ public abstract class SSRCInfo implements Report
         streamconnect = false;
         reports = new SSRCTable<RTCPReportBlock[]>();
         active = false;
-        newrecvstream = false;
+        newrecvstream = true;
         recvstrmap = false;
         newpartsent = false;
         lastsr = false;
@@ -154,7 +154,7 @@ public abstract class SSRCInfo implements Report
         streamconnect = false;
         reports = new SSRCTable<RTCPReportBlock[]>();
         active = false;
-        newrecvstream = false;
+        newrecvstream = true;
         recvstrmap = false;
         newpartsent = false;
         lastsr = false;
