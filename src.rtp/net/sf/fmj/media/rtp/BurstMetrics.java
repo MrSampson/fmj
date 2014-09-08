@@ -59,16 +59,17 @@ public class BurstMetrics
     private synchronized void calculate()
     {
         // Calculate additional transition counts.
+        // Note that as per the RFC c32=c23, so the s3x is actually more
+        // correct than it looks.
         long s1x = c11 + c13 + c14;
         long s2x = c22 + c23;
         long s3x = c13 + c23 + c33;
         long s = s1x + s2x + s3x;
 
         // Calculate burst and gap densities.
-        double p23 = (c22 <= 0) ? 1 : (1 - c22 / (double) s2x);
-        double p32 = (c23 <= 0) ? 0 : (c23 / (double) s3x);
         long burstDensity;
-        long gapDensity;
+        double p23 = (s2x <= 0) ? 1 : (1 - c22 / (double) s2x);
+        double p32 = (c23 <= 0) ? 0 : (c23 / (double) s3x);
 
         if (p23 <= 0)
         {
@@ -80,6 +81,8 @@ public class BurstMetrics
             if (burstDensity > 255)
                 burstDensity = 255;
         }
+
+        long gapDensity;
         if (c14 <= 0)
         {
             gapDensity = 0;
@@ -92,19 +95,27 @@ public class BurstMetrics
         }
 
         // Calculate burst and gap durations in ms.
-        long gapDuration;
-        long burstDuration;
         int msPerPkt = 20;
+        long gapDuration = s1x * msPerPkt / (c13 + 1);
+        long burstDuration;
 
         if (c13 <= 0)
         {
-            gapDuration = 0;
-            burstDuration = 0;
+            // There are no transitions to bursts...
+            if (s2x == 0)
+            {
+                // ... because it all a big gap
+                burstDuration = 0;
+            }
+            else
+            {
+                // ... or because it all a big burst
+                burstDuration = s * msPerPkt;
+            }
         }
         else
         {
-            gapDuration = s1x * msPerPkt / c13;
-            burstDuration = s * msPerPkt / c13 - gapDuration;
+            burstDuration = (s - s1x) * msPerPkt / c13;
         }
 
         // Calculate loss and discard rates.
@@ -133,10 +144,11 @@ public class BurstMetrics
         burstMetrics |= burstDensity & 0xFFL;
         burstMetrics <<= 8;
         burstMetrics |= gapDensity & 0xFFL;
-        burstMetrics <<= 8;
+        burstMetrics <<= 16;
         burstMetrics |= burstDuration & 0xFFFFL;
         burstMetrics <<= 16;
         burstMetrics |= gapDuration & 0xFFFFL;
+
         calculate = false;
     }
 
@@ -151,8 +163,8 @@ public class BurstMetrics
      */
     public synchronized long getBurstMetrics()
     {
-        if (calculate)
-            calculate();
+        //if (calculate) Removing this line so we get good values
+        calculate();
         return burstMetrics;
     }
 
@@ -192,6 +204,7 @@ public class BurstMetrics
             pkt++;
             calculate = false;
         }
+
         if (calculate)
         {
             if (pkt >= GMIN)
