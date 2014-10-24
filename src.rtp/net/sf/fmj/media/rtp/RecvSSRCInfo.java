@@ -9,6 +9,7 @@ import javax.media.rtp.rtcp.*;
 public class RecvSSRCInfo extends SSRCInfo implements ReceiveStream,
         SenderReport
 {
+
     RecvSSRCInfo(SSRCCache cache, int ssrc)
     {
         super(cache, ssrc);
@@ -128,9 +129,12 @@ public class RecvSSRCInfo extends SSRCInfo implements ReceiveStream,
     public int getRoundTripDelay(int sourceSSRC)
     {
         Feedback feedback = null;
+        System.out.println("Getting RTT sender SSRC=" + sourceSSRC);
 
+        System.out.println("Number of reports=" + getFeedbackReports().size());
         for (Feedback report : getFeedbackReports())
         {
+        	System.out.println("Looking at " + (int) report.getSSRC());
             if (sourceSSRC == (int) report.getSSRC())
             {
                 feedback = report;
@@ -142,10 +146,14 @@ public class RecvSSRCInfo extends SSRCInfo implements ReceiveStream,
 
         if (feedback != null)
         {
+        	System.out.println("Feedback not null");
+        	
             long lastRTCPreceiptTime = this.lastRTCPreceiptTime;
 
             if (lastRTCPreceiptTime != 0)
             {
+            	System.out.println("Will calculate");
+            	
                 long lsr = feedback.getLSR();
                 long dlsr = feedback.getDLSR();
 
@@ -168,15 +176,20 @@ public class RecvSSRCInfo extends SSRCInfo implements ReceiveStream,
      */
     public static int getRoundTripDelay(long systime, long lsr, long dlsr)
     {
+    	long lsrTop = (lsr & 0xffff0000) >> 16;
+    	long lsrBottom = lsr & 0xffff;
+    	
         int roundTripDelay = 0;
-
+        long lsw = 0;
+        long ntptime = 0;
+        
         if (lsr > 0)
         {
             long secs = systime / 1000L;
             double msecs = (systime - secs * 1000L) / 1000D;
-            long lsw = (int) (msecs * 4294967296D);
+            lsw = (int) (msecs * 4294967296D);
             long msw = secs;
-            long ntptime = (msw << 32) + lsw;
+            ntptime = (msw << 32) + lsw;
 
             ntptime = (ntptime & 0x0000FFFFFFFF0000L) >> 16;
 
@@ -190,6 +203,17 @@ public class RecvSSRCInfo extends SSRCInfo implements ReceiveStream,
                     roundTripDelay = (int) ((ntprtd * 1000L) >> 16);
             }
         }
+        
+        System.out.println("Systime=" + systime + "\n" +
+		           "lsr=" + lsr + "\n" +
+		       	    "  Secs=" + lsrTop + "\n" +
+		       	    "  Millis=" + ((lsrBottom * 1000) / 0x10000) + "\n" +         		
+		           "dslr=" + dlsr + "\n" +
+		           "lsw=" + lsw + "\n" +
+		           "ntptime=" + ntptime + "\n" +
+		           "=====>> rtt=" + roundTripDelay); 
+               
         return roundTripDelay;
     }
 }
+ 

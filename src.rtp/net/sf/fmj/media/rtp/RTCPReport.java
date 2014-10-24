@@ -350,6 +350,7 @@ public abstract class RTCPReport implements Report
      */
     public void setSystemTimeStamp(long systemTimeStamp)
     {
+    	System.out.println("Setting timestamp to " + systemTimeStamp);
         this.systemTimeStamp = systemTimeStamp;
     }
 }
