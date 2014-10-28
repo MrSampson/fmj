@@ -44,6 +44,7 @@ public class DefaultRTCPReportBuilderImpl implements RTCPReportBuilder
             long systime = ourinfo.systime == 0L ? System.currentTimeMillis()
                     : ourinfo.systime;
             long secs = systime / 1000L;
+            // This is the number of milliseconds expressed as a fraction of 2^32.
             srp.ntptimestamplsw = (systime - secs * 1000) * 0x100000000L / 1000;
             srp.ntptimestampmsw = secs;
             srp.rtptimestamp = (int) ourinfo.rtptime;
