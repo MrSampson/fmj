@@ -46,7 +46,7 @@ public abstract class LoopThread extends MediaThread
 
     public synchronized void kill()
     {
-    	Log.annotate(this, "Kill");
+        Log.annotate(this, "Kill");
         killed = true;
         notifyAll();
     }
@@ -59,7 +59,7 @@ public abstract class LoopThread extends MediaThread
      */
     public synchronized void pause()
     {
-    	Log.annotate(this, "Pause");
+        Log.annotate(this, "Pause");
         paused = true;
     }
 
@@ -78,6 +78,7 @@ public abstract class LoopThread extends MediaThread
          * Let the super MediaThread do whatever it has been designed to do. For
          * example, it may set the priority of this thread.
          */
+        Log.logMediaStackObjectStarted(this);
         super.run();
         Log.annotate(this, "Run");
 
@@ -87,19 +88,19 @@ public abstract class LoopThread extends MediaThread
             // the thread will wait here indefinitely.
             if (!waitHereIfPaused())
             {
-            	Log.annotate(this, "break because not pause");
-            	break;
+                Log.annotate(this, "break because not pause");
+                break;
             }
 
             // Invoke the callback function.
             if (!process())
             {
-            	Log.annotate(this, "break because not process");
-            	break;
+                Log.annotate(this, "break because not process");
+                break;
             }
         }
 
-        Log.annotate(this, "Stop");
+        Log.logMediaStackObjectStopped(this);
     }
 
     /**

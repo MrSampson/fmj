@@ -1,5 +1,7 @@
 package net.sf.fmj.media;
 
+import java.util.logging.*;
+
 import javax.media.*;
 
 /**
@@ -9,6 +11,8 @@ import javax.media.*;
 public class BasicInputConnector extends BasicConnector implements
         InputConnector
 {
+    private static final Logger logger = Logger.getLogger(BasicInputConnector.class.getName());
+    
     /** the connected outputConnector */
     protected OutputConnector outputConnector = null;
     private boolean reset = false;
@@ -37,6 +41,8 @@ public class BasicInputConnector extends BasicConnector implements
                 if (!isValidBufferAvailable() && reset)
                     return null;
                 reset = false;
+                Log.logRemoved(this);
+                
                 return circularBuffer.read();
             }
         case ProtocolSafe:
@@ -56,6 +62,8 @@ public class BasicInputConnector extends BasicConnector implements
                     return null;
                 Buffer buffer = circularBuffer.read();
                 circularBuffer.notifyAll();
+                Log.logRemoved(this);
+                
                 return buffer;
             }
         default:
@@ -114,6 +122,7 @@ public class BasicInputConnector extends BasicConnector implements
      */
     public void setOutputConnector(OutputConnector outputConnector)
     {
+        logger.fine("Updating output connector on " + this + " to " + outputConnector);
         this.outputConnector = outputConnector;
     }
 

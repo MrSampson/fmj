@@ -2,17 +2,19 @@ package net.sf.fmj.media.rtp.util;
 
 import java.io.*;
 
+import net.sf.fmj.media.*;
+
 public class PacketForwarder implements Runnable
 {
     PacketSource source;
     PacketConsumer consumer;
     RTPMediaThread thread;
     boolean closed;
-    private boolean paused;
     public IOException exception;
 
     public PacketForwarder(PacketSource s, PacketConsumer c)
     {
+        Log.objectCreated(this, "PacketForwarder");
         source = null;
         consumer = null;
         closed = false;
@@ -67,6 +69,7 @@ public class PacketForwarder implements Runnable
 
     public void run()
     {
+        Log.logMediaStackObjectStarted(this);
         if (closed || exception != null)
         {
             if (source != null)
@@ -83,7 +86,10 @@ public class PacketForwarder implements Runnable
                     if (checkForClose())
                         return;
                     if (p != null)
+                    {
+                        Log.logReceivedBytes(this, p.length);
                         consumer.sendTo(p);
+                    }
                 } catch (InterruptedIOException iioe)
                 {
                 }
@@ -95,6 +101,7 @@ public class PacketForwarder implements Runnable
         } finally
         {
             consumer.closeConsumer();
+            Log.logMediaStackObjectStopped(this);
         }
     }
 

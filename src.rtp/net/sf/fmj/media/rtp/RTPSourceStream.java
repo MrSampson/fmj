@@ -110,10 +110,10 @@ public class RTPSourceStream
      */
     public void add(Buffer buffer, boolean flag, RTPRawReceiver rtprawreceiver)
     {
-    	if (JitterBufferTester.shouldReset())
-    	{
-    		reset();
-    	}
+        if (JitterBufferTester.shouldReset())
+        {
+            reset();
+        }
 
         if (!started && !bufferWhenStopped)
             return;
@@ -128,7 +128,8 @@ public class RTPSourceStream
          */
         synchronized (q)
         {
-        	Charting.jbQueueSizeChanged(q.getFillCount(), q.getCapacity());
+            
+        Charting.jbQueueSizeChanged(q.getFillCount(), q.getCapacity());
         if (lastSeqRecv - bufferSN > 256L)
         {
             Log.info("Resetting queue, last seq added: " + lastSeqRecv +
@@ -196,6 +197,7 @@ public class RTPSourceStream
 
             q.addPkt(qBuffer);
             added = true;
+            Log.logReceived(this);
         }
         finally
         {
@@ -346,7 +348,7 @@ public class RTPSourceStream
             try
             {
                 behaviour.read(buffer);
-                Log.logRead(this);
+                Log.logRemoved(this);
 
                 if (!buffer.isDiscard())
                     lastSeqSent = buffer.getSequenceNumber();
@@ -355,8 +357,8 @@ public class RTPSourceStream
             {
                 if (!buffer.isDiscard())
                 {
-                	Charting.jbQueueSizeChanged(q.getFillCount(), q.getCapacity());
-                	stats.updateSizeAndCapacity(q.getFillCount(), q.getCapacity());
+                    Charting.jbQueueSizeChanged(q.getFillCount(), q.getCapacity());
+                    stats.updateSizeAndCapacity(q.getFillCount(), q.getCapacity());
                     hasRead = true;
                     q.notifyAll();
                 }

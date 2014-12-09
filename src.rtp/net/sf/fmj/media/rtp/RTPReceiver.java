@@ -104,6 +104,8 @@ public class RTPReceiver extends PacketFilter
     {
         try
         {
+            Log.logReceived(this);
+            
             // Call into this method if you want to do some testing of messing
             // with the types of packets we're receiving for test purposes.
             //hackPacketsForTesting(rtpPacket);

@@ -81,6 +81,8 @@ public class RTPPacketReceiver implements PacketSource, SourceTransferHandler
         p.data = data;
         p.offset = 0;
         p.length = buf != null ? buf.getLength() : 0;
+        Log.logRemovedBytes(this, p.length);
+        
         return p;
     }
 
@@ -127,5 +129,7 @@ public class RTPPacketReceiver implements PacketSource, SourceTransferHandler
             bufQue.writeReport();
             bufQue.notify();
         }
+        
+        Log.logReceivedBytes(this, size);
     }
 }

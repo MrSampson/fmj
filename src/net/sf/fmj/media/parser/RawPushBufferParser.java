@@ -3,6 +3,7 @@ package net.sf.fmj.media.parser;
 import java.awt.*;
 import java.io.*;
 import java.util.*;
+import java.util.logging.*;
 
 import javax.media.*;
 import javax.media.format.*;
@@ -17,6 +18,8 @@ import net.sf.fmj.media.rtp.*;
  */
 public class RawPushBufferParser extends RawStreamParser
 {
+    private static final Logger logger = Logger.getLogger(RawPushBufferParser.class.getName());
+    
     class FrameTrack implements Track, BufferTransferHandler
     {
         Demultiplexer parser;
@@ -519,6 +522,7 @@ public class RawPushBufferParser extends RawStreamParser
                     }
                 }
                 filled = bufferQ.read();
+                Log.logRemoved(this);
             }
 
             // Copy all the attributes from filled to buffer.
@@ -568,11 +572,16 @@ public class RawPushBufferParser extends RawStreamParser
                 if (source instanceof CaptureDevice)
                 {
                     // Flush the buffer Q.
+                    int i = 0;
+                    
                     while (bufferQ.canRead())
                     {
+                        i++;
                         bufferQ.read();
                         bufferQ.readReport();
                     }
+                    
+                    logger.info("Discarded packets from the jitter buffer " + i);
                 }
                 bufferQ.notifyAll();
             }
@@ -631,6 +640,7 @@ public class RawPushBufferParser extends RawStreamParser
                     bufferQ.writeReport();
                     bufferQ.read();
                     bufferQ.readReport();
+                    Log.logReceived(this);
                 }
                 return;
             }

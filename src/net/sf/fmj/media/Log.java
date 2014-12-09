@@ -94,40 +94,78 @@ public class Log
         }
     }
 
-    // Data on how many packets have been seen by various objects in the media
-    // stream.
-    static ConcurrentHashMap<Integer, int[]> packetTracker =
-                                        new ConcurrentHashMap<Integer, int[]>();
-    static int LOG_READ_MAX_INTERVAL = 1024;
+    /**
+     * Data on how many packets have been received by various objects in the media
+     * stream.
+     */
+    private static final Map<Integer, int[]> receivedPacketTracker =
+                                                  new HashMap<Integer, int[]>();
+                                                  
+    /**
+     * Data on how many packets have been removed by various objects in the media
+     * stream                                                  
+     */
+    private static final Map<Integer, int[]> removedPacketTracker =
+                                                  new HashMap<Integer, int[]>();                                                   
+                                                  
+    private static int LOG_READ_MAX_INTERVAL = 1024;
 
     /**
-     * Log that this object has read a packet (or other chunk of data).  Logs
+     * Log that this object has received a packet (or other chunk of data).  Logs
      * are made increasingly rarely as the call progresses.
      * @param obj The object making the call (so call as <tt>logRead(this)</tt>)
      */
-    public static void logRead(Object obj)
+    public static void logReceived(Object obj)
     {
-        logReadBytes(obj, 0, false);
+        logBytes(obj, 0, false, true);
     }
 
     /**
-     * Log that this object has read a packet (or other chunk of data).  Logs
+     * Log that this object has received a packet (or other chunk of data).  Logs
      * are made increasingly rarely as the call progresses.
      * @param obj The object making the call (so call as
      * <tt>logRead(this, nBytes)</tt>)
      * @param nBytes The number of bytes that were read
      */
-    public static void logReadBytes(Object obj, int nBytes)
+    public static void logReceivedBytes(Object obj, int nBytes)
     {
-        logReadBytes(obj, nBytes, true);
+        logBytes(obj, nBytes, true, true);
+    }
+
+    /**
+     * Log that this object has received a packet (or other chunk of data).  Logs
+     * are made increasingly rarely as the call progresses.
+     * @param obj The object making the call (so call as <tt>logRead(this)</tt>)
+     */
+    public static void logRemoved(Object obj)
+    {
+        logBytes(obj, 0, false, false);
+    }
+
+    /**
+     * Log that this object has received a packet (or other chunk of data).  Logs
+     * are made increasingly rarely as the call progresses.
+     * @param obj The object making the call (so call as
+     * <tt>logRead(this, nBytes)</tt>)
+     * @param nBytes The number of bytes that were read
+     */
+    public static void logRemovedBytes(Object obj, int nBytes)
+    {
+        logBytes(obj, nBytes, true, false);
     }
 
     // This method contains a small per-call memory leak - we never remove
     // the per-object data from the hashMap.  Since the amount of leaked data is
     // very small (~10b per object) that's OK, but if we ever beef this up we
     // should add some removal code as well.
-    private static void logReadBytes(Object obj, int nBytes, boolean logBytes)
+    private static void logBytes(Object obj, 
+                                 int nBytes, 
+                                 boolean logBytes, 
+                                 boolean isReceived)
     {
+        Map<Integer, int[]> packetTracker = isReceived ? 
+                                   receivedPacketTracker : removedPacketTracker;
+        
         if (isEnabled && logger.isLoggable(Level.FINEST))
         {
             synchronized (packetTracker)
@@ -147,9 +185,12 @@ public class Log
 
                 if (nCalled >= nextCallToLog)
                 {
-                    logger.finest("logReadBytes called " + nCalled + " times " +
-                        (logBytes ? "(" + totalBytes + " bytes total) " : "") +
-                                                                 "from " + obj);
+                    logger.finest((isReceived ? "logReceivedBytes called " : 
+                                                "logRemovedBytes called ") +
+                                  nCalled + " times " +
+                                  (logBytes ? "(" + totalBytes + " bytes total) " : 
+                                              "") +
+                                  "from " + obj);
                     thisData[2] = (nextCallToLog < LOG_READ_MAX_INTERVAL) ?
                       (2 * nextCallToLog) : (LOG_READ_MAX_INTERVAL + nextCallToLog);
                 }
