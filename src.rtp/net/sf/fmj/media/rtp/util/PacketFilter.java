@@ -2,11 +2,13 @@ package net.sf.fmj.media.rtp.util;
 
 import java.io.*;
 import java.util.*;
+import java.util.logging.*;
 
 import javax.media.rtp.*;
 
 public abstract class PacketFilter implements PacketSource, PacketConsumer
 {
+    private static final Logger logger = Logger.getLogger(PacketFilter.class.getName());
     PacketSource source;
     PacketConsumer consumer;
     public Vector destAddressList;
@@ -125,6 +127,7 @@ public abstract class PacketFilter implements PacketSource, PacketConsumer
 
     public void setConsumer(PacketConsumer c)
     {
+        logger.info("Updating consumer to " + c);
         consumer = c;
     }
 

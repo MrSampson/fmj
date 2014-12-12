@@ -254,6 +254,7 @@ public class BasicFilterModule extends BasicModule
 
             try
             {
+                Log.logReceived(codec);
                 rc = codec.process(inputBuffer, outputBuffer);
 
             } catch (Throwable e)

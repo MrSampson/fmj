@@ -211,7 +211,7 @@ abstract public class BasicModule implements Module, StateTransistor
      */
     public void doStop()
     {
-        Log.annotate(this, "Start");
+        Log.annotate(this, "Stop");
     }
 
     protected void error()
