@@ -88,14 +88,14 @@ public abstract class LoopThread extends MediaThread
             // the thread will wait here indefinitely.
             if (!waitHereIfPaused())
             {
-                Log.annotate(this, "break because not pause");
+                Log.annotate(this, "Process killed while paused, run complete");
                 break;
             }
 
             // Invoke the callback function.
             if (!process())
             {
-                Log.annotate(this, "break because not process");
+                Log.annotate(this, "Process returns false, run complete");
                 break;
             }
         }

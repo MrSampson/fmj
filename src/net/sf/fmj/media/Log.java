@@ -133,8 +133,9 @@ public class Log
     }
 
     /**
-     * Log that this object has received a packet (or other chunk of data).  Logs
-     * are made increasingly rarely as the call progresses.
+     * Log that this object has had a a packet (or other chunk of data) removed.
+     * Logs are made increasingly rarely as the call progresses.
+     * 
      * @param obj The object making the call (so call as <tt>logRead(this)</tt>)
      */
     public static void logRemoved(Object obj)
@@ -143,8 +144,9 @@ public class Log
     }
 
     /**
-     * Log that this object has received a packet (or other chunk of data).  Logs
-     * are made increasingly rarely as the call progresses.
+     * Log that this object has had a packet (or other chunk of data) removed.
+     * Logs are made increasingly rarely as the call progresses.
+     * 
      * @param obj The object making the call (so call as
      * <tt>logRead(this, nBytes)</tt>)
      * @param nBytes The number of bytes that were read
