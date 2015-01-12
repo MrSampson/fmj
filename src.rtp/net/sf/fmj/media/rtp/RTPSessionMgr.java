@@ -1920,6 +1920,7 @@ public class RTPSessionMgr extends RTPManager implements SessionManager
     {
         if (datasource == defaultsource)
         {
+            defaultsource.disconnect();
             defaultsource = null;
             defaultstream = null;
             defaultsourceid = 0;

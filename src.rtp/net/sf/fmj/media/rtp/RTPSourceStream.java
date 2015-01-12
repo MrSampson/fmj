@@ -378,9 +378,14 @@ public class RTPSourceStream
         synchronized (q)
         {
             stats.incrementNbReset();
-            resetQ();
+        }
+        
+        resetQ();
+        
+        synchronized (q)
+        {
             behaviour.reset();
-            lastSeqSent = Buffer.SEQUENCE_UNKNOWN;
+            lastSeqSent = Buffer.SEQUENCE_UNKNOWN;            
         }
     }
 
@@ -390,12 +395,17 @@ public class RTPSourceStream
     public void resetQ()
     {
         Log.comment("Resetting the RTP packet queue");
+        int count = 0;
+        
         synchronized (q)
         {
             for (; q.fillNotEmpty(); behaviour.dropPkt())
-                stats.incrementDiscardedReset();
+                count++;
             q.notifyAll();
         }
+        
+        for (int i = 0; i < count; i++)
+            stats.incrementDiscardedReset();
     }
 
     @Override
@@ -539,11 +549,10 @@ public class RTPSourceStream
     public void stop()
     {
         Log.logMediaStackObjectStopped(this);
-        synchronized (startSyncRoot)
-        {
-            started = false;
-            reset();
-        }
+
+        started = false;
+        reset();
+            
         synchronized (q)
         {
             q.notifyAll();

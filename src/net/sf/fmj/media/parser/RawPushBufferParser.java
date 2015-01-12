@@ -831,7 +831,8 @@ public class RawPushBufferParser extends RawStreamParser
         } catch (Exception e)
         {
             Log.error("Hit exception stopping RawPushBufferParser " +
-                this.hashCode() + "\n" + e);
+                this.hashCode() + "," + e);
+            Log.dumpStack(e);
         }
         started = false;
     }
