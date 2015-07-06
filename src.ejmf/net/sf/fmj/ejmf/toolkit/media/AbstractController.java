@@ -1064,7 +1064,7 @@ public abstract class AbstractController extends AbstractClock implements
      * Controller.
      */
     @Override
-    public final void stop()
+    public final synchronized void stop()
     {
         if (stopController())
         {

@@ -777,7 +777,7 @@ public abstract class AbstractPlayer extends AbstractController implements
      *                If the AbstractController is not in the Started state.
      */
     @Override
-    protected void endOfMedia() throws ClockStoppedException
+    protected synchronized void endOfMedia() throws ClockStoppedException
     {
         synchronized (controllers)
         {

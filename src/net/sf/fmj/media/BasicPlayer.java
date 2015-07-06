@@ -255,7 +255,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * Called as a last step to complete the configure call.
      */
     @Override
-    protected void completeConfigure()
+    protected synchronized void completeConfigure()
     {
         super.completeConfigure();
         synchronized (this)
@@ -281,7 +281,7 @@ public abstract class BasicPlayer extends BasicController implements Player,
      * Called as a last step to complete the realize call.
      */
     @Override
-    protected void completeRealize()
+    protected synchronized void completeRealize()
     {
         state = Realized;
         try

@@ -260,7 +260,7 @@ class GSMDecoderStream extends InputStream
     }
 
     @Override
-    public void reset()
+    public synchronized void reset()
     {
         return;
     }
